@@ -101,4 +101,4 @@ if __name__ == '__main__':
         # for production debug=False
         app.run(debug=True)
     elif env == 'production':
-        app.run()
+        app.run(port=5000)
