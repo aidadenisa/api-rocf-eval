@@ -34,6 +34,8 @@ video_put_args.add_argument("likes", type=int, help="Likes of the video")
 #         abort(404, message="Video ID is not valid")
 
 # resource fields for serialization: what gets returned from a video model
+# if there are no values for this, the marshal will set them to 'None'
+# if args['name']: will be false if args['name'] = 'None'
 resource_fields = {
     'id': fields.Integer,
     'name': fields.String,
@@ -41,6 +43,7 @@ resource_fields = {
     'views': fields.Integer,
 }
 
+videos = {}
 
 # these type of classes are resources that are used for 
 class HelloWorld(Resource):
@@ -53,15 +56,20 @@ class HelloWorld(Resource):
         # return videos[name]
 
         # get videos from DB, this needs to be serialized
-        result = VideoModel.query.get(name = name)
+        result = VideoModel.query.filter_by(name = name).first()
+        if not result:
+            abort(404, message="Could not find video with this name")
         return result
 
     @marshal_with(resource_fields)
     def post(self, name):
         # missing: abort if video exists
         args = video_put_args.parse_args()
+        result = VideoModel.query.filter_by(name=args['name']).first()
+        if result:
+            abort(409, message="Video already exists")
         video = VideoModel(name=args['name'], likes=args['likes'], views=args['views'])
-        db.session.add(video)
+        db.session.add(video) # this is needed just on create, not on update
         db.session.commit()
         return video, 201
     def put(self, name):
