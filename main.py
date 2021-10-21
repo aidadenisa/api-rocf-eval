@@ -1,3 +1,5 @@
+import os
+
 from flask import Flask, request
 from flask_restful import Api, Resource, reqparse, abort, fields, marshal_with 
 from flask_sqlalchemy import SQLAlchemy
@@ -92,7 +94,11 @@ class HelloWorld(Resource):
 # resource, url
 api.add_resource(HelloWorld, "/helloworld/<string:name>")
 
+env = os.environ.get('FLASK_ENV')
 
 if __name__ == '__main__':
-    # for production debug=False
-    app.run(debug=True)
+    if env == 'development':
+        # for production debug=False
+        app.run(debug=True)
+    elif env == 'production':
+        app.run()
