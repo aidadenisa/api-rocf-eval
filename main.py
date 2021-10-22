@@ -6,14 +6,18 @@ from flask import Flask, request
 from flask_restful import Api, Resource, reqparse, abort, fields, marshal_with 
 from flask_sqlalchemy import SQLAlchemy
 
+from flask_cors import CORS, cross_origin
+
 from preprocessing import homography
 
 app = Flask(__name__)
 api = Api(app)
 db = SQLAlchemy(app)
+CORS(app)
 
 # TEMPORARY! REPLACE WITH THE REAL DB
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+app.config['CORS_HEADERS'] = 'Content-Type'
 
 # TODO: to be deleted
 class VideoModel(db.Model): 
@@ -108,6 +112,7 @@ class HelloWorld(Resource):
         return '', 204
 
 class Preprocessing(Resource):
+    @cross_origin()
     @marshal_with(homography_fields)
     def put(self):
         args = homography_put_args.parse_args()
