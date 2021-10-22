@@ -1,8 +1,12 @@
 import os
+import base64
+import cv2
 
 from flask import Flask, request
 from flask_restful import Api, Resource, reqparse, abort, fields, marshal_with 
 from flask_sqlalchemy import SQLAlchemy
+
+from preprocessing import homography
 
 app = Flask(__name__)
 api = Api(app)
@@ -11,7 +15,7 @@ db = SQLAlchemy(app)
 # TEMPORARY! REPLACE WITH THE REAL DB
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 
-
+# TODO: to be deleted
 class VideoModel(db.Model): 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
@@ -24,12 +28,18 @@ class VideoModel(db.Model):
 #create a database that has this model inside
 db.create_all()
 
-
+# TODO: to be deleted
 # create a model for the objects that are sent to PUT req
 video_put_args = reqparse.RequestParser()
 video_put_args.add_argument("name", type=str, help="Name of the video is required", required=True)
 video_put_args.add_argument("views", type=int, help="Views of the video")
 video_put_args.add_argument("likes", type=int, help="Likes of the video")
+
+homography_put_args = reqparse.RequestParser()
+homography_put_args.add_argument("imageb64", type=str, help="Image is missing", required=True)
+homography_put_args.add_argument("points", type=list, location="json", help="Image is missing", required=False)
+
+# TODO: to be deleted
 
 # def abort_id_not_found(name): 
 #     if name not in videos:
@@ -45,8 +55,14 @@ resource_fields = {
     'views': fields.Integer,
 }
 
+homography_fields = {
+    # 'points': fields.List, 
+    'image': fields.String,
+}
+
 videos = {}
 
+# TODO: to be deleted
 # these type of classes are resources that are used for 
 class HelloWorld(Resource):
 
@@ -91,8 +107,22 @@ class HelloWorld(Resource):
         del videos[name]
         return '', 204
 
-# resource, url
+class Preprocessing(Resource):
+    @marshal_with(homography_fields)
+    def put(self):
+        args = homography_put_args.parse_args()
+        img = homography.convertImageB64ToMatrix(args['imageb64'])
+        img = homography.computeHomograpy(img, args['points'])
+        imgb64 = homography.convertImageFromMatrixToB64(img)
+        result = {}
+        result["image"] = imgb64
+        return result
+
+# TODO: to be deleted
 api.add_resource(HelloWorld, "/helloworld/<string:name>")
+
+# good
+api.add_resource(Preprocessing, "/preprocessing")
 
 env = os.environ.get('FLASK_ENV')
 
@@ -101,4 +131,4 @@ if __name__ == '__main__':
         # for production debug=False
         app.run(debug=True)
     elif env == 'production':
-        app.run(port=5000)
+        app.run()
