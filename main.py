@@ -118,6 +118,7 @@ class Preprocessing(Resource):
         args = homography_put_args.parse_args()
         img = homography.convertImageB64ToMatrix(args['imageb64'])
         img = homography.computeHomograpy(img, args['points'])
+        img = homography.removeScore(img)
         imgb64 = homography.convertImageFromMatrixToB64(img)
         result = {}
         result["image"] = imgb64
