@@ -16,7 +16,7 @@ def computeHomograpy(image, points):
     img = cv2.imread(os.path.join(os.getcwd(), 'templates', 'original_rey[1360x768].png'))
     right_points = np.array(points)[np.ma.make_mask(mask)]
     hm, status = cv2.findHomography(np.array(right_points), np.array(p_dst))
-    nH, nW, _ = image.shape
+    nH, nW, _ = img.shape
     im_dst =  cv2.warpPerspective(image, hm, (nW, nH))
     return im_dst
 
