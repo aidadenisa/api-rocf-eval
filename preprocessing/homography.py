@@ -62,14 +62,14 @@ def emphasiseColor(image, contrast=0.2, brightness=(-20)):
     out = cv2.addWeighted( image, contrast, image, 0, brightness)
     return out
 
-def adjustImage(image, alpha=1.4, beta=30):
+def adjustImage(image, increaseBrightness=False, alpha=1.4, beta=30):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     gray[gray == 0] = 255
 
-    # Linear transformation to make image lighter
-    new_image = cv2.convertScaleAbs(gray, alpha=alpha, beta=beta)
+    if increaseBrightness == True:
+        # Linear transformation to make image lighter
+        new_image = cv2.convertScaleAbs(gray, alpha=alpha, beta=beta)
     
-    print(new_image)
     return new_image
 
 def sharpenDrawing(image):
