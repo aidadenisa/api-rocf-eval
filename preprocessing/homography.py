@@ -66,6 +66,7 @@ def adjustImage(image, increaseBrightness=False, alpha=1.4, beta=30):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     gray[gray == 0] = 255
 
+    new_image = gray
     if increaseBrightness == True:
         # Linear transformation to make image lighter
         new_image = cv2.convertScaleAbs(gray, alpha=alpha, beta=beta)
