@@ -6,6 +6,7 @@ import base64
 from io import StringIO
 from io import BytesIO
 from skimage.filters import threshold_local
+from skimage.morphology import skeletonize
 
 
 p_dst = [(382, 219),(852, 219), (852, 537), (382, 537)]
@@ -52,7 +53,6 @@ def removeScore(image, color=(255, 255, 255)):
     # Generating the final mask to detect red color
     BW = (mask1 + mask2) > 0
     result = image.copy()
-    # result = cv2.bitwise_and(result, result, mask=BW)
 
     # set the pixels that are red in the iamge to white
     result[BW] = color
@@ -62,15 +62,34 @@ def emphasiseColor(image, contrast=0.2, brightness=(-20)):
     out = cv2.addWeighted( image, contrast, image, 0, brightness)
     return out
 
-def adjustImage(image, increaseBrightness=False, alpha=1.4, beta=30):
+def adjustImage(image, increaseBrightness=False, alpha=1.4, beta=30, gamma=1.0):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     gray[gray == 0] = 255
-
+    
     new_image = gray
+
+    # new_image = adjustGamma(new_image, gamma=gamma)
+    new_image = adjustGamma(new_image, gamma=0.6)
+
     if increaseBrightness == True:
         # Linear transformation to make image lighter
         new_image = cv2.convertScaleAbs(gray, alpha=alpha, beta=beta)
-    
+
+
+    # new_image = sharpenDrawing(new_image)
+
+    return new_image
+
+
+def adjustGamma(image, gamma=1.0):
+
+    invGamma = 1 / gamma
+ 
+    table = [((i / 255) ** invGamma) * 255 for i in range(256)]
+    table = np.array(table, np.uint8)
+ 
+    new_image = cv2.LUT(image, table)
+
     return new_image
 
 def sharpenDrawing(image):
@@ -85,7 +104,6 @@ def sharpenDrawing(image):
     if np.any(image < 255):
         #create a histogram to see the distribution of pixels that are not white
         hist, _ = np.histogram(image[image < 255].flatten(), range(257))
-        print(hist)
         # apply image thresholding using Unimodal Thresholding
         thresh_val = maxDeviationThresh(hist)
         print(thresh_val)
@@ -98,6 +116,25 @@ def sharpenDrawing(image):
     # print(image)
     # print(threshed)
     return threshed
+
+def expandDrawing(image):
+    new_image = sharpenDrawing(image)
+
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (6, 6))
+    # background = cv2.bitwise_not(background)
+    # doing erosion on mostly white background drawing has the opposite effect of erosion => the drawing becomes thicker
+    # it is inverted by doing a bitwise_not, which will do a logical not operation
+    new_image = cv2.bitwise_not(cv2.erode(new_image, kernel))
+
+    # # scheletonize the currently thick drawing (Skeletonization reduces binary objects to 1 pixel wide representations. This can be useful for feature extraction, and/or representing an object’s topology.)
+    # new_image = skeletonize(new_image / 255, method='lee').astype(np.uint8)
+
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (6, 6))
+    # dilate the (white) skeleton drawing (on black background) by a kernel of 3x3px => add a bit of thickness
+    new_image = cv2.dilate(new_image, kernel)
+
+    new_image = cv2.bitwise_not(new_image)
+    return new_image
 
 
 # method used to apply thresholding to the image (thesis section: 2.3.1 Unimodal Tresholding)

@@ -42,6 +42,7 @@ video_put_args.add_argument("likes", type=int, help="Likes of the video")
 homography_put_args = reqparse.RequestParser()
 homography_put_args.add_argument("imageb64", type=str, help="Image is missing", required=True)
 homography_put_args.add_argument("points", type=list, location="json", help="Image is missing", required=False)
+homography_put_args.add_argument("increaseBrightness", type=bool, help="Brightness is missing", required=False)
 
 # TODO: to be deleted
 
@@ -119,7 +120,7 @@ class Preprocessing(Resource):
         img = homography.convertImageB64ToMatrix(args['imageb64'])
         img = homography.computeHomograpy(img, args['points'])
         img = homography.removeScore(img)
-        img = homography.adjustImage(img)
+        img = homography.adjustImage(img, increaseBrightness=args["increaseBrightness"])
         # img = homography.emphasiseColor(img, 1.1, -50)
         imgb64 = homography.convertImageFromMatrixToB64(img)
         result = {}
