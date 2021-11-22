@@ -2,4 +2,7 @@ __pycache__
 database.db
 .vscode
 
+models
+results
+
 .DS_Store

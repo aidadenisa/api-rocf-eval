@@ -1,6 +1,7 @@
 import os
 import base64
 import cv2
+import json
 
 from flask import Flask, request
 from flask_restful import Api, Resource, reqparse, abort, fields, marshal_with 
@@ -9,6 +10,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS, cross_origin
 
 from preprocessing import homography
+from prediction import predict_complex_scores
 
 app = Flask(__name__)
 api = Api(app)
@@ -30,7 +32,7 @@ class VideoModel(db.Model):
         return f"Video(name={name}, views={views}, likes={likes})"
 
 #create a database that has this model inside
-db.create_all()
+# db.create_all()
 
 # TODO: to be deleted
 # create a model for the objects that are sent to PUT req
@@ -39,10 +41,16 @@ video_put_args.add_argument("name", type=str, help="Name of the video is require
 video_put_args.add_argument("views", type=int, help="Views of the video")
 video_put_args.add_argument("likes", type=int, help="Likes of the video")
 
-homography_put_args = reqparse.RequestParser()
-homography_put_args.add_argument("imageb64", type=str, help="Image is missing", required=True)
-homography_put_args.add_argument("points", type=list, location="json", help="Image is missing", required=False)
-homography_put_args.add_argument("increaseBrightness", type=bool, help="Brightness is missing", required=False)
+preprocessing_post_args = reqparse.RequestParser()
+preprocessing_post_args.add_argument("imageb64", type=str, help="Image is missing", required=True)
+preprocessing_post_args.add_argument("points", type=list, location="json", help="Image is missing", required=False)
+preprocessing_post_args.add_argument("increaseBrightness", type=bool, help="Brightness is missing", required=False)
+preprocessing_post_args.add_argument("gamma", type=float, help="Gamma is missing", required=False)
+preprocessing_post_args.add_argument("threshold", type=int, help="Threshold is missing", required=False)
+
+prediction_post_args = reqparse.RequestParser()
+prediction_post_args.add_argument("imageb64", type=str, help="Image is missing", required=True)
+prediction_post_args.add_argument("points", type=list, location="json", help="Image is missing", required=True)
 
 # TODO: to be deleted
 
@@ -63,6 +71,17 @@ resource_fields = {
 homography_fields = {
     # 'points': fields.List, 
     'image': fields.String,
+}
+
+# prediction_response = {
+#     'names': fields.String, 
+#     'scores': fields.List, 
+#     'distances': fields.List, 
+#     'rect': fields.List
+# }
+
+prediction_response = {
+    "predictionComplexScores": fields.Raw()
 }
 
 videos = {}
@@ -115,23 +134,41 @@ class HelloWorld(Resource):
 class Preprocessing(Resource):
     @cross_origin()
     @marshal_with(homography_fields)
-    def put(self):
-        args = homography_put_args.parse_args()
+    def post(self, task):
+        args = preprocessing_post_args.parse_args()
         img = homography.convertImageB64ToMatrix(args['imageb64'])
-        img = homography.computeHomograpy(img, args['points'])
-        img = homography.removeScore(img)
-        img = homography.adjustImage(img, increaseBrightness=args["increaseBrightness"])
+
         # img = homography.emphasiseColor(img, 1.1, -50)
         imgb64 = homography.convertImageFromMatrixToB64(img)
         result = {}
         result["image"] = imgb64
         return result
 
+class Prediction(Resource):
+    @cross_origin()
+    @marshal_with(prediction_response)
+    def post(self):
+        # Predicts on an already binarized image
+        args = prediction_post_args.parse_args()
+        img = homography.convertImageB64ToMatrix(args['imageb64'])
+
+        #TODO
+        predictionComplexScores = predict_complex_scores.predictComplexScores(img, args['points'])
+
+        result = {}
+        result["predictionComplexScores"] = json.dumps(str(predictionComplexScores))
+        return result
+
+
 # TODO: to be deleted
 api.add_resource(HelloWorld, "/helloworld/<string:name>")
+# api.add_resource(HelloWorld,'/api/hello/world',endpoint='world',methods=['GET'])
+
 
 # good
-api.add_resource(Preprocessing, "/preprocessing")
+api.add_resource(Preprocessing, "/preprocessing/<string:task>")
+api.add_resource(Prediction, "/prediction")
+
 
 env = os.environ.get('FLASK_ENV')
 

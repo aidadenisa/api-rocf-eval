@@ -69,7 +69,7 @@ def adjustImage(image, increaseBrightness=False, alpha=1.4, beta=30, gamma=1.0):
     new_image = gray
 
     # new_image = adjustGamma(new_image, gamma=gamma)
-    new_image = adjustGamma(new_image, gamma=0.6)
+    new_image = adjustGamma(new_image, gamma=gamma)
 
     if increaseBrightness == True:
         # Linear transformation to make image lighter
@@ -81,7 +81,7 @@ def adjustImage(image, increaseBrightness=False, alpha=1.4, beta=30, gamma=1.0):
     return new_image
 
 
-def adjustGamma(image, gamma=1.0):
+def adjustGamma(image, gamma=0.6):
 
     invGamma = 1 / gamma
  
@@ -106,7 +106,7 @@ def sharpenDrawing(image):
         hist, _ = np.histogram(image[image < 255].flatten(), range(257))
         # apply image thresholding using Unimodal Thresholding
         thresh_val = maxDeviationThresh(hist)
-        print(thresh_val)
+        # print(thresh_val)
         # create a mask for when the image's pixels are under the threshold value, which will be true for most of the colored values that are belonging to the drawing (paper and white stuff will be bigger then threshold) => True for belonging to the drawing, 0 for not
         mask = image < thresh_val
         # print(mask)
@@ -172,3 +172,41 @@ def maxDeviationThresh(hist):
     else:
         T_index = -index_min
     return T_index + index_min
+
+def binarizeImage(image, threshold):
+    # if threshold == None:
+        # calculate threshold
+    newImage = np.ones(image.shape, np.uint8) * 255
+    mask = image < threshold
+    newImage[mask] = 0
+    return newImage
+
+def computeHomographyRhomb(points):
+    point_rhomb = points[2] + (1,)
+    mask = np.ones(5, dtype=int)
+    mask[2] = 0
+    right_points = np.array(points)[np.ma.make_mask(mask)]
+    hm, status = cv2.findHomography(np.array(right_points), np.array(p_dst))
+    new_point = np.dot(hm, point_rhomb)
+    new_point = tuple(np.round(new_point/new_point[2]).astype(int))
+    center = new_point[0:2]
+    return center
+
+def background_thumbnail(template, modality, thumbnail_size=(200,200)):
+    foreground = Image.fromarray(template).convert(modality)
+    background = Image.new(modality, thumbnail_size, "white")
+    foreground.thumbnail(thumbnail_size)
+    (w, h) = foreground.size
+    upper_left=(int((thumbnail_size[0] - w) / 2), int((thumbnail_size[1] - h) / 2))
+    background.paste(foreground, upper_left)
+    return np.array(background)
+
+def unique_color(img):
+    mask = img>0
+    only_color = img[mask]
+    colors, count = np.unique(only_color, return_counts=True)
+    max_color = colors[count.argmax()]
+    # print(max_color)
+    img[np.logical_not(mask)] = max_color
+    return img
+ 
