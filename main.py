@@ -10,7 +10,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS, cross_origin
 
 from preprocessing import homography
-from prediction import predict_complex_scores
+from prediction import predict_complex_scores, predict_simple_scores
 
 app = Flask(__name__)
 api = Api(app)
@@ -153,10 +153,12 @@ class Prediction(Resource):
         img = homography.convertImageB64ToMatrix(args['imageb64'])
 
         #TODO
-        predictionComplexScores = predict_complex_scores.predictComplexScores(img, args['points'])
+        # predictionComplexScores = predict_complex_scores.predictComplexScores(img, args['points'])
+        predictionTotalScores = predict_simple_scores.predictScores(img, args['points'])
 
         result = {}
-        result["predictionComplexScores"] = json.dumps(str(predictionComplexScores))
+        # result["predictionComplexScores"] = json.dumps(str(predictionComplexScores))
+        result["predictionComplexScores"] = json.dumps(str(predictionTotalScores))
         return result
 
 
