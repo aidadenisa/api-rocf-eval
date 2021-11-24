@@ -8,6 +8,7 @@ from scipy.spatial import distance
 
 from preprocessing import homography
 from prediction import image_processing as imgProcess
+from prediction.image_processing import thick_rect
 
 ### INITIALIZATIONS
 
@@ -145,17 +146,6 @@ def best_line(background, drawing=None, oriz=True):
               drawing = cv2.line(drawing, (lefty, max_left), (righty, max_right), (0, 0, 255), 2, cv2.LINE_AA)
               return (lefty, max_left), (righty, max_right)
     return None
-
-
-
-def thick_rect(diag, W):
-    Dx = diag[1][0] - diag[0][0]
-    Dy = diag[1][1] - diag[0][1]
-    D = np.sqrt(Dx * Dx + Dy * Dy)
-    Dx = int(0.5 * W * Dx / D)
-    Dy = int(0.5 * W * Dy / D)
-    return [(diag[0][0] - Dy, diag[0][1] + Dx), (diag[1][0] - Dy, diag[1][1] + Dx), (diag[1][0] + Dy, diag[1][1] - Dx),
-            (diag[0][0] + Dy, diag[0][1] - Dx)]
 
 class Pattern2:
   def __init__(self, img, drawing, model, scaler):

@@ -16,7 +16,7 @@ from preprocessing import homography
 
 from prediction.patterns import pattern1
 from prediction.patterns import pattern2
-# from prediction.patterns import pattern3
+from prediction.patterns import pattern3
 # from patterns import pattern4
 # from patterns import pattern5
 from prediction.patterns import pattern6
@@ -36,6 +36,7 @@ from prediction.patterns import pattern6
 root = './' 
 results_folder = root + 'results/'
 models_folder = root + "models/"
+results_DL_scores = results_folder + 'scores.csv'
 # hom_folder = os.path.join(root, 'new_sample')
 
 #read data about tests from database_patients_complete
@@ -54,13 +55,6 @@ count = 0
 
 # img_path = os.path.join('', 'NEW_ROCF_RC375.png')
 
-
-def to_float(a):
-    return np.array(a[1:-1].split(',')).astype(float)
-
-def to_tuple(t):
-    return ast.literal_eval(t)
-
 def label_conv(s):
     if s == 'NORMALI':
         return 0
@@ -69,7 +63,7 @@ def label_conv(s):
     if s == 'DEMENZA':
         return 2
 
-def find_line(image, points):
+def find_line(image, points, predictionComplexScores):
 
     # identify the 5 points of interest the homogram 
     # points = np.array(file_homog.loc[img_path[:-4]].to_numpy()[0])
@@ -108,12 +102,12 @@ def find_line(image, points):
     # TODO: explain what is returned
     drawing, results[0], diag1, diag2 = pat1.get_score(ret_fig)
 
- 
     pat6 = pattern6.Pattern6(img, drawing)
     drawing, results[5], oriz_coord = pat6.get_score(ret_fig, diag1, diag2)    
-    '''
-    pat3 = pattern3(img, drawing, joblib.load(models_folder + 'rett_diag_model.joblib'), joblib.load(models_folder + 'rett_diag_scaler.joblib'), joblib.load(models_folder + 'rett_diag_score_model.joblib'), joblib.load(models_folder + 'rett_diag_score_scaler.joblib'), img_path)
+
+    pat3 = pattern3.Pattern3(img, drawing, joblib.load(models_folder + 'rett_diag_model.joblib'), joblib.load(models_folder + 'rett_diag_scaler.joblib'), joblib.load(models_folder + 'rett_diag_score_model.joblib'), joblib.load(models_folder + 'rett_diag_score_scaler.joblib'), predictionComplexScores)
     drawing, results[2] = pat3.get_score(ret_fig, diag1, diag2, oriz_coord)      
+    '''
     pat5 = pattern5(img, drawing, joblib.load(models_folder + 'cross_model.joblib'), joblib.load(models_folder + 'cross_scaler.joblib'), joblib.load(models_folder + 'cross_score_model.joblib'), joblib.load(models_folder + 'cross_score_scaler.joblib'), img_path)
     drawing, results[4] = pat5.get_score()    
     pat4 = pattern4(img, drawing, diag1, oriz_coord)
@@ -160,12 +154,12 @@ def find_line(image, points):
     return results.astype(np.uint8)
 
 
-def predictScores(image, points):
+def predictScores(image, points, predictionComplexScores):
 
     name = "newImage"
 
     # identify the patterns in the image
-    results = find_line(image, points)
+    results = find_line(image, points, predictionComplexScores)
 
     df = pd.DataFrame([results], columns=pattern_list)
 

@@ -68,3 +68,18 @@ def draw_contours(drawing, contour):
     # plt.imshow(drawing)
     # plt.show()
     return drawing
+
+# construct a ROI around the diagonal, with a buffer of W
+def thick_rect(diag, W):
+    # distance between diagonal's x-coords
+    Dx = diag[1][0] - diag[0][0]
+    # distance between diagonal's y-coords
+    Dy = diag[1][1] - diag[0][1]
+    # calculate the distance between the 2 points of the diagonal ( --- sqrt((x2-x1)^2 + (y2-y1)^2) --- )
+    D = np.sqrt(Dx * Dx + Dy * Dy)
+    #TODO: why do we calculate it like this?
+    Dx = int(0.5 * W * Dx / D)
+    Dy = int(0.5 * W * Dy / D)
+    #return the rectangle formed around the diagonal line
+    return [(diag[0][0] - Dy, diag[0][1] + Dx), (diag[1][0] - Dy, diag[1][1] + Dx), (diag[1][0] + Dy, diag[1][1] - Dx),
+            (diag[0][0] + Dy, diag[0][1] - Dx)]
