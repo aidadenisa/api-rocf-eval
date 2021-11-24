@@ -19,7 +19,7 @@ from prediction.patterns import pattern2
 # from prediction.patterns import pattern3
 # from patterns import pattern4
 # from patterns import pattern5
-# from patterns import pattern6
+from prediction.patterns import pattern6
 # from patterns import pattern7
 # from patterns import pattern8
 # from patterns import pattern9
@@ -108,9 +108,10 @@ def find_line(image, points):
     # TODO: explain what is returned
     drawing, results[0], diag1, diag2 = pat1.get_score(ret_fig)
 
-    '''
-    pat6 = pattern6(img, drawing)
+ 
+    pat6 = pattern6.Pattern6(img, drawing)
     drawing, results[5], oriz_coord = pat6.get_score(ret_fig, diag1, diag2)    
+    '''
     pat3 = pattern3(img, drawing, joblib.load(models_folder + 'rett_diag_model.joblib'), joblib.load(models_folder + 'rett_diag_scaler.joblib'), joblib.load(models_folder + 'rett_diag_score_model.joblib'), joblib.load(models_folder + 'rett_diag_score_scaler.joblib'), img_path)
     drawing, results[2] = pat3.get_score(ret_fig, diag1, diag2, oriz_coord)      
     pat5 = pattern5(img, drawing, joblib.load(models_folder + 'cross_model.joblib'), joblib.load(models_folder + 'cross_scaler.joblib'), joblib.load(models_folder + 'cross_score_model.joblib'), joblib.load(models_folder + 'cross_score_scaler.joblib'), img_path)

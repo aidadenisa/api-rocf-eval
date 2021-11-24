@@ -50,7 +50,7 @@ def getBackground(external, img, morph=True, ret_hier=False, internal=None):
     else:
         return background, cnts
 
-# adds the countours of the lines in the drawing, with red
+# adds the countours of the lines in the drawing
 def draw_contours(drawing, contour):
     # plt.imshow(drawing)
     # plt.show()
