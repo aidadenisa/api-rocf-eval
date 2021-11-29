@@ -17,8 +17,8 @@ from preprocessing import homography
 from prediction.patterns import pattern1
 from prediction.patterns import pattern2
 from prediction.patterns import pattern3
-# from patterns import pattern4
-# from patterns import pattern5
+# from prediction.patterns import pattern4
+from prediction.patterns import pattern5
 from prediction.patterns import pattern6
 # from patterns import pattern7
 # from patterns import pattern8
@@ -107,11 +107,13 @@ def find_line(image, points, predictionComplexScores):
 
     pat3 = pattern3.Pattern3(img, drawing, joblib.load(models_folder + 'rett_diag_model.joblib'), joblib.load(models_folder + 'rett_diag_scaler.joblib'), joblib.load(models_folder + 'rett_diag_score_model.joblib'), joblib.load(models_folder + 'rett_diag_score_scaler.joblib'), predictionComplexScores)
     drawing, results[2] = pat3.get_score(ret_fig, diag1, diag2, oriz_coord)      
+    
+    pat5 = pattern5.Pattern5(img, drawing, joblib.load(models_folder + 'cross_model.joblib'), joblib.load(models_folder + 'cross_scaler.joblib'), joblib.load(models_folder + 'cross_score_model.joblib'), joblib.load(models_folder + 'cross_score_scaler.joblib'), predictionComplexScores)
+    drawing, results[4] = pat5.get_score()   
     '''
-    pat5 = pattern5(img, drawing, joblib.load(models_folder + 'cross_model.joblib'), joblib.load(models_folder + 'cross_scaler.joblib'), joblib.load(models_folder + 'cross_score_model.joblib'), joblib.load(models_folder + 'cross_score_scaler.joblib'), img_path)
-    drawing, results[4] = pat5.get_score()    
-    pat4 = pattern4(img, drawing, diag1, oriz_coord)
+    pat4 = pattern4.Pattern4(img, drawing, diag1, oriz_coord)
     drawing, results[3] = pat4.get_score(diag1, ret_fig) 
+    
     pat7 = pattern7(img, drawing)
     drawing, results[6], vert = pat7.get_score(ret_fig, diag1, diag2)
     pat8 = pattern8(img, drawing, diag1, diag2, vert, oriz_coord)

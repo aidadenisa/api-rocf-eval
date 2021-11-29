@@ -81,7 +81,8 @@ homography_fields = {
 # }
 
 prediction_response = {
-    "predictionComplexScores": fields.Raw()
+    "predictionComplexScores": fields.Raw(),
+    "predictionTotalScores": fields.Raw()
 }
 
 videos = {}
