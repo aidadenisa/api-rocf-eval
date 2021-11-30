@@ -20,7 +20,7 @@ from prediction.patterns import pattern3
 from prediction.patterns import pattern4
 from prediction.patterns import pattern5
 from prediction.patterns import pattern6
-# from patterns import pattern7
+from prediction.patterns import pattern7
 # from patterns import pattern8
 # from patterns import pattern9
 # from patterns import pattern10
@@ -113,9 +113,10 @@ def find_line(image, points, predictionComplexScores):
     
     pat4 = pattern4.Pattern4(img, drawing, diag1, oriz_coord)
     drawing, results[3] = pat4.get_score(diag1, ret_fig) 
-    '''
-    pat7 = pattern7(img, drawing)
+    
+    pat7 = pattern7.Pattern7(img, drawing)
     drawing, results[6], vert = pat7.get_score(ret_fig, diag1, diag2)
+    '''
     pat8 = pattern8(img, drawing, diag1, diag2, vert, oriz_coord)
     drawing, results[7] = pat8.get_score() 
     pat9 = pattern9(img, drawing, vert)
