@@ -27,7 +27,7 @@ from prediction.patterns import pattern10
 from prediction.patterns import pattern11
 from prediction.patterns import pattern12
 from prediction.patterns import pattern13
-# from patterns import pattern14
+from prediction.patterns import pattern14
 # from patterns import pattern15
 # from patterns import pattern16
 # from patterns import pattern17
@@ -135,9 +135,10 @@ def find_line(image, points, predictionComplexScores):
     
     pat13 = pattern13.Pattern13(img, drawing, r_points, ret_fig)
     drawing, results[12] = pat13.get_score() 
-    '''      
-    pat14 = pattern14(img, drawing, r_points)
+       
+    pat14 = pattern14.Pattern14(img, drawing, r_points)
     drawing, results[13], rhomb_fig = pat14.get_score(r_points, diag1, diag2)
+    '''   
     pat15 = pattern15(img, drawing, joblib.load(models_folder + 'rect_model.joblib'), joblib.load(models_folder + 'rect_scaler.joblib'), joblib.load(models_folder + 'rect_score_model.joblib'), joblib.load(models_folder + 'rect_score_scaler.joblib'), img_path)
     drawing, results[14] = pat15.get_score(ret_fig)
     pat16 = pattern16(img, drawing, r_points)
