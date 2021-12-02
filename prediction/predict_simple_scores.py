@@ -26,7 +26,7 @@ from prediction.patterns import pattern9
 from prediction.patterns import pattern10
 from prediction.patterns import pattern11
 from prediction.patterns import pattern12
-# from patterns import pattern13
+from prediction.patterns import pattern13
 # from patterns import pattern14
 # from patterns import pattern15
 # from patterns import pattern16
@@ -74,7 +74,7 @@ def find_line(image, points, predictionComplexScores):
     points = [tuple(x) for x in points]
 
     #compute the homography for the point corresponding to the rhomb
-    # r_points = homography.computeHomographyRhomb(points)
+    r_points = homography.computeHomographyRhomb(points)
 
     grayscale = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     # transform the black zones resulted from the homography transformation in the color of the paper
@@ -132,9 +132,10 @@ def find_line(image, points, predictionComplexScores):
      
     pat12 = pattern12.Pattern12(img, drawing, joblib.load(models_folder + 'rail_model.joblib'), joblib.load(models_folder + 'rail_scaler.joblib'), joblib.load(models_folder + 'rail_score_model.joblib'), joblib.load(models_folder + 'rail_score_scaler.joblib'), predictionComplexScores)
     drawing, results[11] = pat12.get_score()
-    '''
-    pat13 = pattern13(img, drawing, r_points, ret_fig)
-    drawing, results[12] = pat13.get_score()       
+    
+    pat13 = pattern13.Pattern13(img, drawing, r_points, ret_fig)
+    drawing, results[12] = pat13.get_score() 
+    '''      
     pat14 = pattern14(img, drawing, r_points)
     drawing, results[13], rhomb_fig = pat14.get_score(r_points, diag1, diag2)
     pat15 = pattern15(img, drawing, joblib.load(models_folder + 'rect_model.joblib'), joblib.load(models_folder + 'rect_scaler.joblib'), joblib.load(models_folder + 'rect_score_model.joblib'), joblib.load(models_folder + 'rect_score_scaler.joblib'), img_path)
