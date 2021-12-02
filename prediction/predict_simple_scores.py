@@ -29,7 +29,7 @@ from prediction.patterns import pattern12
 from prediction.patterns import pattern13
 from prediction.patterns import pattern14
 from prediction.patterns import pattern15
-# from patterns import pattern16
+from prediction.patterns import pattern16
 # from patterns import pattern17
 # from patterns import pattern18
 
@@ -141,9 +141,11 @@ def find_line(image, points, predictionComplexScores):
        
     pat15 = pattern15.Pattern15(img, drawing, joblib.load(models_folder + 'rect_model.joblib'), joblib.load(models_folder + 'rect_scaler.joblib'), joblib.load(models_folder + 'rect_score_model.joblib'), joblib.load(models_folder + 'rect_score_scaler.joblib'), predictionComplexScores)
     drawing, results[14] = pat15.get_score(ret_fig)
-    '''
-    pat16 = pattern16(img, drawing, r_points)
+    
+    pat16 = pattern16.Pattern16(img, drawing, r_points)
     drawing, results[15] = pat16.get_score(ret_fig, oriz_coord, r_points)
+
+    '''
     pat17 = pattern17(img, drawing, joblib.load(models_folder + 'cross_vert_model.joblib'), joblib.load(models_folder + 'cross_vert_scaler.joblib'), joblib.load(models_folder + 'cross_vert_score_model.joblib'), joblib.load(models_folder + 'cross_vert_score_scaler.joblib'), img_path)
     drawing, results[16] = pat17.get_score()
     pat18 = pattern18(img, drawing, joblib.load(models_folder + 'triang_model.joblib'), joblib.load(models_folder + 'triang_scaler.joblib'), joblib.load(models_folder + 'triang_score_model.joblib'), joblib.load(models_folder + 'triang_score_scaler.joblib'), img_path)
