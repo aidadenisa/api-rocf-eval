@@ -31,7 +31,7 @@ from prediction.patterns import pattern14
 from prediction.patterns import pattern15
 from prediction.patterns import pattern16
 from prediction.patterns import pattern17
-# from prediction.patterns import pattern18
+from prediction.patterns import pattern18
 
 root = './' 
 results_folder = root + 'results/'
@@ -148,12 +148,11 @@ def find_line(image, points, predictionComplexScores):
     pat17 = pattern17.Pattern17(img, drawing, joblib.load(models_folder + 'cross_vert_model.joblib'), joblib.load(models_folder + 'cross_vert_scaler.joblib'), joblib.load(models_folder + 'cross_vert_score_model.joblib'), joblib.load(models_folder + 'cross_vert_score_scaler.joblib'), predictionComplexScores)
     drawing, results[16] = pat17.get_score()
 
-    '''
-    pat18 = pattern18(img, drawing, joblib.load(models_folder + 'triang_model.joblib'), joblib.load(models_folder + 'triang_scaler.joblib'), joblib.load(models_folder + 'triang_score_model.joblib'), joblib.load(models_folder + 'triang_score_scaler.joblib'), img_path)
+    pat18 = pattern18.Pattern18(img, drawing, joblib.load(models_folder + 'triang_model.joblib'), joblib.load(models_folder + 'triang_scaler.joblib'), joblib.load(models_folder + 'triang_score_model.joblib'), joblib.load(models_folder + 'triang_score_scaler.joblib'), predictionComplexScores)
     drawing, results[17] = pat18.get_score()
     # plt.imshow(drawing)
     # plt.show()    
-    '''
+    
 
     # convert image from grayscale to RGB
     overlap = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
