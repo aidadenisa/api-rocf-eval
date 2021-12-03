@@ -31,12 +31,36 @@ from prediction.patterns import pattern16
 from prediction.patterns import pattern17
 from prediction.patterns import pattern18
 
+import boto3
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 root = './' 
 results_folder = root + 'results/'
 models_folder = root + "models/"
 results_DL_scores = results_folder + 'scores.csv'
 # hom_folder = os.path.join(root, 'new_sample')
 
+# Creating the low level functional client
+client = boto3.client(
+    's3',
+    aws_access_key_id = os.environ.get('S3_USER'),
+    aws_secret_access_key = os.environ.get('S3_KEY'),
+    region_name = 'eu-central-1'
+)
+resource = boto3.resource(
+    's3',
+    aws_access_key_id = os.environ.get('S3_USER'),
+    aws_secret_access_key = os.environ.get('S3_KEY'),
+    region_name = 'eu-central-1'
+)
+obj = client.get_object(
+    Bucket = 'rocf-models',
+    Key = 'cross_model.joblib'
+)
+print(obj)
 #read data about tests from database_patients_complete
 labels = pd.read_csv(root + 'templates/database_patients_complete.csv', header=0, index_col=0, delimiter=';')
 

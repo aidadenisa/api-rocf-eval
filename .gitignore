@@ -5,4 +5,6 @@ database.db
 models
 results
 
+.env
+
 .DS_Store
