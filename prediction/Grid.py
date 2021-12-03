@@ -1,6 +1,5 @@
 import numpy as np
 import cv2
-from matplotlib import pyplot as plt
 import os
 import math
 
@@ -124,8 +123,8 @@ class Grid():
         fig, ax = plt.subplots(nrows=1, ncols=2)
         ax.ravel()[0].imshow(min_input[:,:,0], cmap='gray')
         ax.ravel()[1].imshow(template[:,:,0], cmap='gray')
-        plt.savefig(os.path.join(result_folder, name, 'input_'+str(idx)+'.png'))
+        # plt.savefig(os.path.join(result_folder, name, 'input_'+str(idx)+'.png'))
         #plt.show()
-        plt.close('all')    
+        # plt.close('all')    
         print('done template {}'.format(idx))    
         return min_val, math.hypot(int(min_x2-min_w/2-(self.x-self.w/2)), int(min_y2-min_h/2-(self.y-self.h/2))), (min_x2, min_y2, min_w, min_h)

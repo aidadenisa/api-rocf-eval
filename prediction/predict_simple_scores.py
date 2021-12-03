@@ -1,5 +1,4 @@
 import numpy as np
-from matplotlib import pyplot as plt
 import pandas as pd
 import os
 import joblib 
@@ -7,7 +6,6 @@ import ast
 
 from shapely.geometry import Polygon, Point, LineString
 import numpy as np
-from matplotlib import pyplot as plt
 import pandas as pd
 from skimage.morphology import skeletonize
 import cv2

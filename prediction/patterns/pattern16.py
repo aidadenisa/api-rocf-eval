@@ -4,7 +4,6 @@ import pandas as pd
 from skimage.morphology import skeletonize
 from shapely.geometry import Polygon, Point, LineString
 from shapely.ops import unary_union
-from matplotlib import pyplot as plt
 
 from preprocessing.homography import sharpenDrawing
 from prediction.image_processing import draw_contours

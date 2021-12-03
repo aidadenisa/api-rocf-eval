@@ -4,7 +4,6 @@ import pandas as pd
 from skimage.morphology import skeletonize
 from shapely.geometry import Polygon, Point, LineString
 from shapely.ops import unary_union
-from matplotlib import pyplot as plt
 
 from preprocessing.homography import unique_color, maxDeviationThresh
 from prediction.image_processing import draw_contours
@@ -38,12 +37,12 @@ def getBackground(external, img, show=False, morph=False, ret_hier=False, intern
     background_t = cv2.bitwise_and(image_interval, background_t)
     if show:
         overlap = cv2.polylines(cv2.cvtColor(img.copy(), cv2.COLOR_GRAY2RGB), [points.reshape(4,1,2)], True, (255, 0, 0), 1)
-        plt.imshow(overlap)
-        plt.show()
+        # plt.imshow(overlap)
+        # plt.show()
     background_t = unique_color(background_t)
-    if show:
-        plt.imshow(background_t, cmap='gray')
-        plt.show()
+    # if show:
+    #     plt.imshow(background_t, cmap='gray')
+    #     plt.show()
     background_t, t_val = extract_drawing(background_t)
     if t_val > 246:
         background_t = np.ones(interval, dtype=np.uint8) * 255

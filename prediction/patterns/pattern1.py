@@ -4,10 +4,7 @@ import pandas as pd
 from skimage.morphology import skeletonize
 from shapely.geometry import LineString, Point
 from shapely.ops import unary_union
-from matplotlib import pyplot as plt
-import math
 
-from preprocessing import homography
 from prediction import image_processing as imgProcess
 from prediction.image_processing import thick_rect
 

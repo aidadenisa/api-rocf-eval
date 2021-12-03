@@ -3,7 +3,6 @@ import numpy as np
 import pandas as pd
 from skimage.morphology import skeletonize
 from shapely.geometry import Polygon, Point
-from matplotlib import pyplot as plt
 from scipy.spatial import distance
 
 from preprocessing import homography

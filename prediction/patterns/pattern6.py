@@ -3,7 +3,6 @@ import numpy as np
 import pandas as pd
 from skimage.morphology import skeletonize
 from shapely.geometry import Polygon, Point, LineString
-from matplotlib import pyplot as plt
 
 from preprocessing import homography
 from prediction import image_processing as imgProcess
