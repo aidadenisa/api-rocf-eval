@@ -1,3 +1,4 @@
-site-packages/matplotlib
-site-packages/scipy.libs
-site-packages/numpy.libs
+/site-packages/opencv_python.libs
+/site-packages/matplotlib
+/site-packages/scipy.libs
+/site-packages/numpy.libs
