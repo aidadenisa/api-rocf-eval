@@ -1,5 +1,4 @@
 site-packages/opencv_python.libs
-site-packages/cv2
 site-packages/matplotlib
 site-packages/scipy.libs
 site-packages/numpy.libs
