@@ -34,6 +34,7 @@ from prediction.patterns import pattern18
 import boto3
 import os
 from dotenv import load_dotenv
+import tempfile
 
 load_dotenv()
 
@@ -61,6 +62,13 @@ obj = client.get_object(
     Key = 'cross_model.joblib'
 )
 print(obj)
+with tempfile.NamedTemporaryFile(mode='w+b') as f:
+    client.download_fileobj('rocf-models', 'cross_model.joblib', f)
+    f.seek(0)
+    modelll = joblib.load(f.name)
+
+
+print(modelll)
 #read data about tests from database_patients_complete
 labels = pd.read_csv(root + 'templates/database_patients_complete.csv', header=0, index_col=0, delimiter=';')
 
