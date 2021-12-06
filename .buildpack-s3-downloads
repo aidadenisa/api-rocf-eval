@@ -1,0 +1,2 @@
+s3://rocf-models/best_model_triplet_cross_transfer.hdf5
+s3://rocf-models/best_model_triplet_cross_vert_transfer.hdf5

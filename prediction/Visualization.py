@@ -2,11 +2,11 @@ import os
 import numpy as np
 import json
 import tensorflow as tf
-from tensorflow.keras.models import load_model
 from tensorflow.keras import backend as T
+import tempfile
 
 from prediction import Grid
-from prediction import triplet_loss
+from prediction.model_storage import getKerasModel
 
 root='./'
 model_folder=root + 'models'
@@ -43,8 +43,8 @@ class Visualization():
             #template = np.reshape(self.templates[i], self.input_shape)
             template = self.templates[i]
             template =  np.repeat(template[..., np.newaxis], 3, -1)
-            self.model = load_model(os.path.join(model_folder, template_dic[i]), custom_objects={'batch_hard_triplet_loss': triplet_loss.batch_hard_triplet_loss,
-                                                                                         'compute_accuracy_hard': triplet_loss.compute_accuracy})               
+            self.model = getKerasModel(template_dic[i])
+
             #plot_model(self.model, show_shapes=True)
             max_val, distance, rect = self.grids[i].visualize(self.img, self.model, self.input_shape, template, i, self.name)
             self.scores.append(max_val)

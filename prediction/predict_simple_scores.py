@@ -11,6 +11,7 @@ from skimage.morphology import skeletonize
 import cv2
 
 from preprocessing import homography
+from prediction.model_storage import retrieveModel
 
 from prediction.patterns import pattern1
 from prediction.patterns import pattern2
@@ -31,37 +32,11 @@ from prediction.patterns import pattern16
 from prediction.patterns import pattern17
 from prediction.patterns import pattern18
 
-import boto3
-import os
-from dotenv import load_dotenv
-import tempfile
-
-load_dotenv()
-
 root = './' 
 results_folder = root + 'results/'
 models_folder = root + "models/"
 results_DL_scores = results_folder + 'scores.csv'
 # hom_folder = os.path.join(root, 'new_sample')
-
-# Creating the low level functional client
-client = boto3.client(
-    's3',
-    aws_access_key_id = os.environ.get('S3_USER'),
-    aws_secret_access_key = os.environ.get('S3_KEY'),
-    region_name = 'eu-central-1'
-)
-resource = boto3.resource(
-    's3',
-    aws_access_key_id = os.environ.get('S3_USER'),
-    aws_secret_access_key = os.environ.get('S3_KEY'),
-    region_name = 'eu-central-1'
-)
-# obj = client.get_object(
-#     Bucket = 'rocf-models',
-#     Key = 'cross_model.joblib'
-# )
-# print(obj)
 
 
 #read data about tests from database_patients_complete
@@ -211,16 +186,3 @@ def predictScores(image, points, predictionComplexScores):
         df.to_csv(results_folder + 'total_scores.csv', mode = 'a', header = False, index=False)
 
     return results
-
-def retrieveModel(localPath): 
-    model = None
-    environment = os.environ.get('FLASK_ENV')
-    if environment == 'development':
-    # if environment == 'production':
-        with tempfile.NamedTemporaryFile(mode='w+b') as f:
-            client.download_fileobj('rocf-models', localPath, f)
-            f.seek(0)
-            model = joblib.load(f.name)
-    elif localPath is not None: 
-        model = joblib.load(models_folder + localPath)
-    return model
