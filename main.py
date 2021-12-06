@@ -10,7 +10,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS, cross_origin
 
 from preprocessing import homography
-from prediction import predict_complex_scores, predict_simple_scores
+from prediction import predict_complex_scores, predict_simple_scores, model_storage
 
 app = Flask(__name__)
 api = Api(app)
@@ -189,4 +189,5 @@ if __name__ == '__main__':
         # for production debug=False
         app.run(debug=True)
     elif env == 'production':
+        model_storage.downloadModels()
         app.run()

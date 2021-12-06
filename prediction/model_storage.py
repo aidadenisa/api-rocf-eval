@@ -55,7 +55,7 @@ def getKerasModel(localPath):
       # with tempfile.NamedTemporaryFile(mode='w+b') as f:
       #   client.download_fileobj('rocf-models', localPath, f, Callback=progress, Config=boto3.s3.transfer.TransferConfig(max_concurrency=50) )
       #   f.seek(0)
-        model = load_model(os.path.join('.tmp/' + localPath), custom_objects={'batch_hard_triplet_loss': triplet_loss.batch_hard_triplet_loss, 'compute_accuracy_hard': triplet_loss.compute_accuracy})               
+        model = load_model(os.path.join(models_folder, localPath), custom_objects={'batch_hard_triplet_loss': triplet_loss.batch_hard_triplet_loss, 'compute_accuracy_hard': triplet_loss.compute_accuracy})               
 
     elif localPath is not None: 
       model = load_model(os.path.join(models_folder, localPath), custom_objects={'batch_hard_triplet_loss': triplet_loss.batch_hard_triplet_loss, 'compute_accuracy_hard': triplet_loss.compute_accuracy})               
@@ -64,3 +64,9 @@ def getKerasModel(localPath):
 
 def progress(progress):
   print(progress)
+
+def downloadModels(): 
+  list=client.list_objects(Bucket='rocf-models')['Contents']
+  for key in list:
+    print("downloading model: " + key['Key'])
+    client.download_file('rocf-models', key['Key'], './models/' + key['Key'])
