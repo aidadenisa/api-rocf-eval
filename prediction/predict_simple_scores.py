@@ -57,18 +57,13 @@ resource = boto3.resource(
     aws_secret_access_key = os.environ.get('S3_KEY'),
     region_name = 'eu-central-1'
 )
-obj = client.get_object(
-    Bucket = 'rocf-models',
-    Key = 'cross_model.joblib'
-)
-print(obj)
-with tempfile.NamedTemporaryFile(mode='w+b') as f:
-    client.download_fileobj('rocf-models', 'cross_model.joblib', f)
-    f.seek(0)
-    modelll = joblib.load(f.name)
+# obj = client.get_object(
+#     Bucket = 'rocf-models',
+#     Key = 'cross_model.joblib'
+# )
+# print(obj)
 
 
-print(modelll)
 #read data about tests from database_patients_complete
 labels = pd.read_csv(root + 'templates/database_patients_complete.csv', header=0, index_col=0, delimiter=';')
 
@@ -118,13 +113,12 @@ def find_line(image, points, predictionComplexScores):
     results = np.zeros(18)
 
     # [STUDIED] Generate score for pattern 2 (mostly computer vision, + SVM prediction)
-    pat2 = pattern2.Pattern2(img, drawing, joblib.load(models_folder + 'rectangle_model.joblib'), joblib.load(models_folder + 'rectangle_scaler.joblib'))
+    pat2 = pattern2.Pattern2(img, drawing, retrieveModel('rectangle_model.joblib'), retrieveModel('rectangle_scaler.joblib'))
     # get the drawing that contains the idenitfied lines and the polygon, with the circles drawn in its corners
     # get the resulted score
     # return the figure as a tuple: first is the polygon shape, and the second is the corners (vertices)
     drawing, results[1], ret_fig = pat2.get_score()
     # print(ret_fig)
-
    
     #Generate score for pattern 1 [ANALYTICAL] [COMPUTER VISION]
     # img - initial image; drawing - generated drawing after the initia image
@@ -135,10 +129,10 @@ def find_line(image, points, predictionComplexScores):
     pat6 = pattern6.Pattern6(img, drawing)
     drawing, results[5], oriz_coord = pat6.get_score(ret_fig, diag1, diag2)    
 
-    pat3 = pattern3.Pattern3(img, drawing, joblib.load(models_folder + 'rett_diag_model.joblib'), joblib.load(models_folder + 'rett_diag_scaler.joblib'), joblib.load(models_folder + 'rett_diag_score_model.joblib'), joblib.load(models_folder + 'rett_diag_score_scaler.joblib'), predictionComplexScores)
-    drawing, results[2] = pat3.get_score(ret_fig, diag1, diag2, oriz_coord)      
+    pat3 = pattern3.Pattern3(img, drawing, retrieveModel('rett_diag_model.joblib'),  retrieveModel('rett_diag_scaler.joblib'), retrieveModel('rett_diag_score_model.joblib'), retrieveModel('rett_diag_score_scaler.joblib'), predictionComplexScores)
+    drawing, results[2] = pat3.get_score(ret_fig, diag1, diag2, oriz_coord)   
     
-    pat5 = pattern5.Pattern5(img, drawing, joblib.load(models_folder + 'cross_model.joblib'), joblib.load(models_folder + 'cross_scaler.joblib'), joblib.load(models_folder + 'cross_score_model.joblib'), joblib.load(models_folder + 'cross_score_scaler.joblib'), predictionComplexScores)
+    pat5 = pattern5.Pattern5(img, drawing, retrieveModel('cross_model.joblib'), retrieveModel('cross_scaler.joblib'), retrieveModel('cross_score_model.joblib'), retrieveModel('cross_score_scaler.joblib'), predictionComplexScores)
     drawing, results[4] = pat5.get_score()   
     
     pat4 = pattern4.Pattern4(img, drawing, diag1, oriz_coord)
@@ -154,13 +148,13 @@ def find_line(image, points, predictionComplexScores):
     drawing, results[8] = pat9.get_score(ret_fig, vert)
 
     
-    pat10 = pattern10.Pattern10(img, drawing, joblib.load(models_folder + 'face_model.joblib'), joblib.load(models_folder + 'face_scaler.joblib'), joblib.load(models_folder + 'face_score_model.joblib'), joblib.load(models_folder + 'face_score_scaler.joblib'), predictionComplexScores)
+    pat10 = pattern10.Pattern10(img, drawing, retrieveModel('face_model.joblib'), retrieveModel('face_scaler.joblib'), retrieveModel('face_score_model.joblib'), retrieveModel('face_score_scaler.joblib'), predictionComplexScores)
     drawing, results[9] = pat10.get_score(diag2, oriz_coord)
     
     pat11 = pattern11.Pattern11(img, drawing, vert, diag2)
     drawing, results[10] = pat11.get_score(ret_fig, diag1, diag2)  
      
-    pat12 = pattern12.Pattern12(img, drawing, joblib.load(models_folder + 'rail_model.joblib'), joblib.load(models_folder + 'rail_scaler.joblib'), joblib.load(models_folder + 'rail_score_model.joblib'), joblib.load(models_folder + 'rail_score_scaler.joblib'), predictionComplexScores)
+    pat12 = pattern12.Pattern12(img, drawing, retrieveModel('rail_model.joblib'), retrieveModel('rail_scaler.joblib'), retrieveModel('rail_score_model.joblib'), retrieveModel('rail_score_scaler.joblib'), predictionComplexScores)
     drawing, results[11] = pat12.get_score()
     
     pat13 = pattern13.Pattern13(img, drawing, r_points, ret_fig)
@@ -169,21 +163,20 @@ def find_line(image, points, predictionComplexScores):
     pat14 = pattern14.Pattern14(img, drawing, r_points)
     drawing, results[13], rhomb_fig = pat14.get_score(r_points, diag1, diag2)
        
-    pat15 = pattern15.Pattern15(img, drawing, joblib.load(models_folder + 'rect_model.joblib'), joblib.load(models_folder + 'rect_scaler.joblib'), joblib.load(models_folder + 'rect_score_model.joblib'), joblib.load(models_folder + 'rect_score_scaler.joblib'), predictionComplexScores)
+    pat15 = pattern15.Pattern15(img, drawing, retrieveModel('rect_model.joblib'), retrieveModel('rect_scaler.joblib'), retrieveModel('rect_score_model.joblib'), retrieveModel('rect_score_scaler.joblib'), predictionComplexScores)
     drawing, results[14] = pat15.get_score(ret_fig)
     
     pat16 = pattern16.Pattern16(img, drawing, r_points)
     drawing, results[15] = pat16.get_score(ret_fig, oriz_coord, r_points)
 
-    pat17 = pattern17.Pattern17(img, drawing, joblib.load(models_folder + 'cross_vert_model.joblib'), joblib.load(models_folder + 'cross_vert_scaler.joblib'), joblib.load(models_folder + 'cross_vert_score_model.joblib'), joblib.load(models_folder + 'cross_vert_score_scaler.joblib'), predictionComplexScores)
+    pat17 = pattern17.Pattern17(img, drawing, retrieveModel('cross_vert_model.joblib'), retrieveModel('cross_vert_scaler.joblib'), retrieveModel('cross_vert_score_model.joblib'), retrieveModel('cross_vert_score_scaler.joblib'), predictionComplexScores)
     drawing, results[16] = pat17.get_score()
 
-    pat18 = pattern18.Pattern18(img, drawing, joblib.load(models_folder + 'triang_model.joblib'), joblib.load(models_folder + 'triang_scaler.joblib'), joblib.load(models_folder + 'triang_score_model.joblib'), joblib.load(models_folder + 'triang_score_scaler.joblib'), predictionComplexScores)
+    pat18 = pattern18.Pattern18(img, drawing, retrieveModel('triang_model.joblib'), retrieveModel('triang_scaler.joblib'), retrieveModel('triang_score_model.joblib'), retrieveModel('triang_score_scaler.joblib'), predictionComplexScores)
     drawing, results[17] = pat18.get_score()
     # plt.imshow(drawing)
     # plt.show()    
     
-
     # convert image from grayscale to RGB
     overlap = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
     # extract from a generated image that contains true (1, white) for all the pixels in the drawing that is different than 0 (black), the pixels that follow the mask that is true for any pixel from the drawing that is different than green (which is usually the contour of the drawing)  
@@ -219,4 +212,15 @@ def predictScores(image, points, predictionComplexScores):
 
     return results
 
- 
+def retrieveModel(localPath): 
+    model = None
+    environment = os.environ.get('FLASK_ENV')
+    if environment == 'development':
+    # if environment == 'production':
+        with tempfile.NamedTemporaryFile(mode='w+b') as f:
+            client.download_fileobj('rocf-models', localPath, f)
+            f.seek(0)
+            model = joblib.load(f.name)
+    elif localPath is not None: 
+        model = joblib.load(models_folder + localPath)
+    return model
