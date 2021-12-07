@@ -11,6 +11,7 @@ from flask_cors import CORS, cross_origin
 from preprocessing import homography
 from prediction import predict_complex_scores, predict_simple_scores, model_storage
 from data import database
+from data.utils import fixJSON
 
 app = Flask(__name__)
 api = Api(app)
@@ -160,6 +161,17 @@ class Prediction(Resource):
         result["_id"] = str(insertResult.inserted_id)
         return result
 
+class ROCFEvaluation(Resource): 
+    def get(self, id):
+        #use 1 for accending, -1 for decending
+        result = db.rocf.find({'id': id})
+        return None, 200
+
+class ROCFEvaluationsList(Resource): 
+    def get(self):
+        #use 1 for accending, -1 for decending
+        result = list(db.rocf.find().sort('date', -1).limit(20))
+        return fixJSON(result), 200
 
 # TODO: to be deleted
 # api.add_resource(HelloWorld, "/helloworld/<string:name>")
@@ -169,6 +181,9 @@ class Prediction(Resource):
 # good
 api.add_resource(Preprocessing, "/preprocessing")
 api.add_resource(Prediction, "/prediction")
+api.add_resource(ROCFEvaluationsList, "/rocf")
+api.add_resource(ROCFEvaluation, "/rocf/<string:id>")
+
 
 env = os.environ.get('FLASK_ENV')
 
