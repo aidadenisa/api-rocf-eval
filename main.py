@@ -4,42 +4,23 @@ import cv2
 import json
 
 from flask import Flask, request
-from flask_restful import Api, Resource, reqparse, abort, fields, marshal_with 
-from flask_sqlalchemy import SQLAlchemy
+from flask_restful import Api, Resource, reqparse, abort, fields, marshal_with, inputs
 
 from flask_cors import CORS, cross_origin
 
 from preprocessing import homography
 from prediction import predict_complex_scores, predict_simple_scores, model_storage
+from data import database
 
 app = Flask(__name__)
 api = Api(app)
-db = SQLAlchemy(app)
 CORS(app)
 
-# TEMPORARY! REPLACE WITH THE REAL DB
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+#DB
+mongoClient = database.initDB(app)
+db = mongoClient.db
+
 app.config['CORS_HEADERS'] = 'Content-Type'
-
-# TODO: to be deleted
-class VideoModel(db.Model): 
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    views = db.Column(db.Integer, nullable=False)
-    likes = db.Column(db.Integer, nullable=False)
-
-    def __repr__(self):
-        return f"Video(name={name}, views={views}, likes={likes})"
-
-#create a database that has this model inside
-# db.create_all()
-
-# TODO: to be deleted
-# create a model for the objects that are sent to PUT req
-video_put_args = reqparse.RequestParser()
-video_put_args.add_argument("name", type=str, help="Name of the video is required", required=True)
-video_put_args.add_argument("views", type=int, help="Views of the video")
-video_put_args.add_argument("likes", type=int, help="Likes of the video")
 
 preprocessing_post_args = reqparse.RequestParser()
 preprocessing_post_args.add_argument("imageb64", type=str, help="Image is missing", required=True)
@@ -49,8 +30,11 @@ preprocessing_post_args.add_argument("gamma", type=float, help="Gamma is missing
 preprocessing_post_args.add_argument("threshold", type=int, help="Threshold is missing", required=False)
 
 prediction_post_args = reqparse.RequestParser()
-prediction_post_args.add_argument("imageb64", type=str, help="Image is missing", required=True)
+prediction_post_args.add_argument("patientCode", type=str, help="Patient code is missing", required=True)
 prediction_post_args.add_argument("points", type=list, location="json", help="Image is missing", required=True)
+prediction_post_args.add_argument("date", type=inputs.datetime_from_iso8601, help="Datetime is missing", required=True)
+prediction_post_args.add_argument("imageb64", type=str, help="Image is missing", required=True)
+
 
 # TODO: to be deleted
 
@@ -82,11 +66,14 @@ homography_fields = {
 
 prediction_response = {
     # "predictionComplexScores": fields.Raw(),
-    "predictionTotalScores": fields.List(fields.Integer)
+    "_id": fields.Raw(),
+    "predictionTotalScores": fields.List(fields.Integer),
+    "patientCode": fields.String(),
+    "date": fields.DateTime(),
+    "points": fields.Raw(),
 }
 
-videos = {}
-
+'''
 # TODO: to be deleted
 # these type of classes are resources that are used for 
 class HelloWorld(Resource):
@@ -126,16 +113,12 @@ class HelloWorld(Resource):
         
         # send back result and status code to client
         return  videos[name], 201
-    def delete(self, name): 
-        # missing: abort if video missing
-
-        del videos[name]
-        return '', 204
+'''
 
 class Preprocessing(Resource):
     @cross_origin()
     @marshal_with(homography_fields)
-    def post(self, task):
+    def post(self):
         args = preprocessing_post_args.parse_args()
         img = homography.convertImageB64ToMatrix(args['imageb64'])
 
@@ -144,7 +127,6 @@ class Preprocessing(Resource):
         result = {}
         result["image"] = imgb64
         return result
-
 class Prediction(Resource):
     @cross_origin()
     @marshal_with(prediction_response)
@@ -168,22 +150,25 @@ class Prediction(Resource):
         # test = [2, 1, 1, 0, 0, 3, 3, 1, 2, 1, 3, 1, 1, 3, 2, 3, 1, 1]
         result = {}
         # result["predictionComplexScores"] = json.dumps(str(predictionComplexScores))
-        result["predictionTotalScores"] = predictionTotalScores
+        result["predictionTotalScores"] = predictionTotalScores.tolist()
+        result["patientCode"] = args["patientCode"]
+        result["date"] = args["date"]
+        result["points"] = args["points"]
+
+        insertResult = db.rocf.insert_one(result)
+        # print(insertResult)
+        result["_id"] = str(insertResult.inserted_id)
         return result
 
 
 # TODO: to be deleted
-api.add_resource(HelloWorld, "/helloworld/<string:name>")
+# api.add_resource(HelloWorld, "/helloworld/<string:name>")
 # api.add_resource(HelloWorld,'/api/hello/world',endpoint='world',methods=['GET'])
 
 
 # good
-api.add_resource(Preprocessing, "/preprocessing/<string:task>")
+api.add_resource(Preprocessing, "/preprocessing")
 api.add_resource(Prediction, "/prediction")
-
-print ("DOWNLOADING FILES")
-model_storage.downloadModels()
-
 
 env = os.environ.get('FLASK_ENV')
 
@@ -193,3 +178,6 @@ if __name__ == '__main__':
         app.run(debug=True)
     elif env == 'production':
         app.run()
+
+# print ("DOWNLOADING FILES")
+# model_storage.downloadModels()
