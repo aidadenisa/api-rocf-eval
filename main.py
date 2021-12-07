@@ -181,6 +181,9 @@ api.add_resource(HelloWorld, "/helloworld/<string:name>")
 api.add_resource(Preprocessing, "/preprocessing/<string:task>")
 api.add_resource(Prediction, "/prediction")
 
+print ("DOWNLOADING FILES")
+model_storage.downloadModels()
+
 
 env = os.environ.get('FLASK_ENV')
 
@@ -189,5 +192,4 @@ if __name__ == '__main__':
         # for production debug=False
         app.run(debug=True)
     elif env == 'production':
-        model_storage.downloadModels()
         app.run()
