@@ -4,9 +4,16 @@ import cv2
 import json
 from bson import ObjectId
 
+import redis
+from rq import Queue
+import time
+
+#TODO: in production we need a pass
+r = redis.Redis()
+q = Queue(connection=r)
+
 from flask import Flask, request
 from flask_restful import Api, Resource, reqparse, abort, fields, marshal_with, inputs
-
 from flask_cors import CORS, cross_origin
 
 from preprocessing import homography
@@ -145,7 +152,7 @@ class Prediction(Resource):
         #     "distances": [41.23105625617661, 56.568542494923804, 10.0, 91.92388155425118, 53.85164807134504, 31.622776601683793, 36.05551275463989],
         #     "rect": [(334, 159, 54, 254), (782, 327, 87, 86), (607, 383, 230, 151), (792, 169, 268, 312), (399, 250, 123, 156), (350, 555, 150, 155), (482, 510, 308, 121)]
         # }
-
+        
         predictionComplexScores = predict_complex_scores.predictComplexScores(img, args['points'])
         predictionTotalScores = predict_simple_scores.predictScores(img, args['points'], predictionComplexScores)
 
@@ -162,6 +169,25 @@ class Prediction(Resource):
         result["_id"] = str(insertResult.inserted_id)
         return result
 
+    @cross_origin()
+    @marshal_with(prediction_response)
+    def put(self):
+        # Predicts on an already binarized image
+        args = prediction_post_args.parse_args()
+
+        result = {}
+        # result["predictionComplexScores"] = json.dumps(str(predictionComplexScores))
+        # result["predictionTotalScores"] = predictionTotalScores.tolist()
+        result["patientCode"] = args["patientCode"]
+        result["date"] = args["date"]
+        result["points"] = args["points"]
+
+        insertResult = db.rocf.insert_one(result)
+        result["_id"] = str(insertResult.inserted_id)
+
+        job = q.enqueue(ROCFevaluate, args, insertResult)
+
+        return result
 class ROCFEvaluation(Resource): 
     def get(self, id):
         #use 1 for accending, -1 for decending
@@ -177,6 +203,27 @@ class ROCFEvaluationsList(Resource):
 # TODO: to be deleted
 # api.add_resource(HelloWorld, "/helloworld/<string:name>")
 # api.add_resource(HelloWorld,'/api/hello/world',endpoint='world',methods=['GET'])
+
+
+def ROCFevaluate(args, DBobject):
+    img = homography.convertImageB64ToMatrix(args['imageb64'])
+    # For testing purposes, you can use this: 
+    # predictionComplexScores = {
+    #     "names": "Immagini-01",
+    #     "scores": [305.1994, 19.02158, 69.96901, 144.1374, 40.056805, 11.410182, 24.091259],
+    #     "distances": [41.23105625617661, 56.568542494923804, 10.0, 91.92388155425118, 53.85164807134504, 31.622776601683793, 36.05551275463989],
+    #     "rect": [(334, 159, 54, 254), (782, 327, 87, 86), (607, 383, 230, 151), (792, 169, 268, 312), (399, 250, 123, 156), (350, 555, 150, 155), (482, 510, 308, 121)]
+    # }
+    
+    predictionComplexScores = predict_complex_scores.predictComplexScores(img, args['points'])
+    predictionTotalScores = predict_simple_scores.predictScores(img, args['points'], predictionComplexScores)
+
+    # test = [2, 1, 1, 0, 0, 3, 3, 1, 2, 1, 3, 1, 1, 3, 2, 3, 1, 1]
+
+    insertResult = db.rocf.update_one(
+        filter = { '_id': DBobject.inserted_id },
+        update = { '$set': {'predictionTotalScores': predictionTotalScores.tolist()}}
+    )
 
 
 # good
