@@ -2,6 +2,7 @@ import os
 import base64
 import cv2
 import json
+from bson import ObjectId
 
 from flask import Flask, request
 from flask_restful import Api, Resource, reqparse, abort, fields, marshal_with, inputs
@@ -164,8 +165,8 @@ class Prediction(Resource):
 class ROCFEvaluation(Resource): 
     def get(self, id):
         #use 1 for accending, -1 for decending
-        result = db.rocf.find({'id': id})
-        return None, 200
+        result = db.rocf.find_one({'_id': ObjectId(id)})
+        return fixJSON(result), 200
 
 class ROCFEvaluationsList(Resource): 
     def get(self):
