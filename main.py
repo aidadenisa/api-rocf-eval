@@ -17,7 +17,7 @@ from flask_restful import Api, Resource, reqparse, abort, fields, marshal_with, 
 from flask_cors import CORS, cross_origin
 
 from preprocessing import homography
-from prediction import predict_complex_scores, predict_simple_scores, model_storage
+from prediction import predict_complex_scores, predict_simple_scores, model_storage, utils
 from data import database
 from data.utils import fixJSON
 
@@ -44,6 +44,18 @@ prediction_post_args.add_argument("points", type=list, location="json", help="Im
 prediction_post_args.add_argument("date", type=inputs.datetime_from_iso8601, help="Datetime is missing", required=True)
 prediction_post_args.add_argument("imageb64", type=str, help="Image is missing", required=True)
 
+revision_post_args = reqparse.RequestParser()
+revision_post_args.add_argument("_rocfEvaluationId", type=str, help="Evaluation code is missing", required=True)
+revision_post_args.add_argument("revisedScores", type=list, location="json", help="Revised scores are missing", required=True)
+revision_post_args.add_argument("scores", type=list, location="json", help="Updated scores are missing", required=True)
+
+revision_response = {
+    "_id": fields.Raw(),
+    "_rocfEvaluationId": fields.Raw(),
+    "scores": fields.List(fields.Raw()),
+    "revisedScores": fields.List(fields.Raw()),
+}
+
 
 # TODO: to be deleted
 
@@ -66,20 +78,18 @@ homography_fields = {
     'image': fields.String,
 }
 
-# prediction_response = {
-#     'names': fields.String, 
-#     'scores': fields.List, 
-#     'distances': fields.List, 
-#     'rect': fields.List
-# }
-
 prediction_response = {
-    # "predictionComplexScores": fields.Raw(),
     "_id": fields.Raw(),
-    "predictionTotalScores": fields.List(fields.Integer),
     "patientCode": fields.String(),
     "date": fields.DateTime(),
     "points": fields.Raw(),
+    "scores": fields.List(fields.Raw()),
+}
+
+revision_response = {
+    "_id": fields.Raw(),
+    "_rocfEvaluationId": fields.Raw(),
+    "revisedScores": fields.List(fields.Raw()),
 }
 
 '''
@@ -138,14 +148,14 @@ class Preprocessing(Resource):
         return result
 class Prediction(Resource):
     @cross_origin()
-    @marshal_with(prediction_response)
+    # @marshal_with(prediction_response)
     def post(self):
         # Predicts on an already binarized image
         args = prediction_post_args.parse_args()
         img = homography.convertImageB64ToMatrix(args['imageb64'])
 
         
-        # For testing purposes, you can use this: 
+        #For testing purposes, you can use this: 
         # predictionComplexScores = {
         #     "names": "Immagini-01",
         #     "scores": [305.1994, 19.02158, 69.96901, 144.1374, 40.056805, 11.410182, 24.091259],
@@ -155,11 +165,12 @@ class Prediction(Resource):
         
         predictionComplexScores = predict_complex_scores.predictComplexScores(img, args['points'])
         predictionTotalScores = predict_simple_scores.predictScores(img, args['points'], predictionComplexScores)
+        scores = utils.generateScoresFromPrediction(predictionTotalScores)
 
         # test = [2, 1, 1, 0, 0, 3, 3, 1, 2, 1, 3, 1, 1, 3, 2, 3, 1, 1]
+
         result = {}
-        # result["predictionComplexScores"] = json.dumps(str(predictionComplexScores))
-        result["predictionTotalScores"] = predictionTotalScores.tolist()
+        result["scores"] = scores
         result["patientCode"] = args["patientCode"]
         result["date"] = args["date"]
         result["points"] = args["points"]
@@ -176,8 +187,6 @@ class Prediction(Resource):
         args = prediction_post_args.parse_args()
 
         result = {}
-        # result["predictionComplexScores"] = json.dumps(str(predictionComplexScores))
-        # result["predictionTotalScores"] = predictionTotalScores.tolist()
         result["patientCode"] = args["patientCode"]
         result["date"] = args["date"]
         result["points"] = args["points"]
@@ -200,6 +209,32 @@ class ROCFEvaluationsList(Resource):
         result = list(db.rocf.find().sort('date', -1).limit(20))
         return fixJSON(result), 200
 
+
+class ROCFRevisions(Resource): 
+    # @marshal_with(revision_response)
+    def post(self):
+        args = revision_post_args.parse_args()
+        evaluationId = args['_rocfEvaluationId']
+        queryInitialEvaluation = db.rocf.find_one({'_id': ObjectId(evaluationId)})
+        result = {}
+        if queryInitialEvaluation: 
+            result["_rocfEvaluationId"] = ObjectId(evaluationId)
+            result["revisedScores"] = args["revisedScores"]
+
+            insertResult = db.rocfRevisions.insert_one(result)
+            result["_id"] = str(insertResult.inserted_id)
+
+            updateROCF = db.rocf.update_one(
+                filter = { '_id': ObjectId(evaluationId)},
+                update = { '$set': {
+                    'scores': args["scores"]
+                    }
+                }
+            )
+        
+        return fixJSON(result), 200
+
+
 # TODO: to be deleted
 # api.add_resource(HelloWorld, "/helloworld/<string:name>")
 # api.add_resource(HelloWorld,'/api/hello/world',endpoint='world',methods=['GET'])
@@ -218,11 +253,17 @@ def ROCFevaluate(args, DBobject):
     predictionComplexScores = predict_complex_scores.predictComplexScores(img, args['points'])
     predictionTotalScores = predict_simple_scores.predictScores(img, args['points'], predictionComplexScores)
 
-    # test = [2, 1, 1, 0, 0, 3, 3, 1, 2, 1, 3, 1, 1, 3, 2, 3, 1, 1]
+    #TESTT
+    # predictionTotalScores = [2, 1, 1, 0, 0, 3, 3, 1, 2, 1, 3, 1, 1, 3, 2, 3, 1, 1]
+
+    scores = utils.generateScoresFromPrediction(predictionTotalScores)
 
     insertResult = db.rocf.update_one(
         filter = { '_id': DBobject.inserted_id },
-        update = { '$set': {'predictionTotalScores': predictionTotalScores.tolist()}}
+        update = { '$set': {
+            'scores': scores
+            }
+        }
     )
 
 
@@ -231,6 +272,7 @@ api.add_resource(Preprocessing, "/preprocessing")
 api.add_resource(Prediction, "/prediction")
 api.add_resource(ROCFEvaluationsList, "/rocf")
 api.add_resource(ROCFEvaluation, "/rocf/<string:id>")
+api.add_resource(ROCFRevisions, "/revision")
 
 
 env = os.environ.get('FLASK_ENV')
