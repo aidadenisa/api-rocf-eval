@@ -69,7 +69,8 @@ def adjustImage(image, increaseBrightness=False, alpha=1.4, beta=30, gamma=1.0):
     new_image = gray
 
     # new_image = adjustGamma(new_image, gamma=gamma)
-    new_image = adjustGamma(new_image, gamma=gamma)
+    if gamma is not 1.0:
+        new_image = adjustGamma(new_image, gamma=gamma)
 
     if increaseBrightness == True:
         # Linear transformation to make image lighter
@@ -92,7 +93,7 @@ def adjustGamma(image, gamma=0.6):
 
     return new_image
 
-def sharpenDrawing(image):
+def sharpenDrawing(image, threshold=None):
     image = cv2.bilateralFilter(image, 10, sigmaColor=15, sigmaSpace=15)
     # plt.imshow(dst, cmap='gray')
     # plt.show()
@@ -100,25 +101,45 @@ def sharpenDrawing(image):
     
     #initialize the drawing array as fully white 
     threshed = np.ones(image.shape, np.uint8) * 255
+    if threshold is None:
+        #if there is in the image at least a pixel that is not white (meaning we have drawing lines in the image)
+        if np.any(image < 255):
+            #create a histogram to see the distribution of pixels that are not white
+            hist, _ = np.histogram(image[image < 255].flatten(), range(257))
+            # apply image thresholding using Unimodal Thresholding
+            threshold = maxDeviationThresh(hist)
+            # print(thresh_val)
+        else:
+            threshold = 255
+    # create a mask for when the image's pixels are under the threshold value, which will be true for most of the colored values that are belonging to the drawing (paper and white stuff will be bigger then threshold) => True for belonging to the drawing, 0 for not
+    mask = image < threshold
+    # print(mask)
+
+    # on the white canvas created before, set the pixels that have the value under the threshold (so they belong to the drawing) to black (0) => you have extracted the drawing in a sharper version 
+    threshed[mask] = 0
+    # print(image)
+    # print(threshed)
+    return threshed
+
+def getThreshold(image):
+    image = cv2.bilateralFilter(image, 10, sigmaColor=15, sigmaSpace=15)
+    # plt.imshow(dst, cmap='gray')
+    # plt.show()
+    threshold = 255
     #if there is in the image at least a pixel that is not white (meaning we have drawing lines in the image)
     if np.any(image < 255):
         #create a histogram to see the distribution of pixels that are not white
         hist, _ = np.histogram(image[image < 255].flatten(), range(257))
         # apply image thresholding using Unimodal Thresholding
-        thresh_val = maxDeviationThresh(hist)
+        threshold = maxDeviationThresh(hist)
         # print(thresh_val)
-        # create a mask for when the image's pixels are under the threshold value, which will be true for most of the colored values that are belonging to the drawing (paper and white stuff will be bigger then threshold) => True for belonging to the drawing, 0 for not
-        mask = image < thresh_val
-        # print(mask)
-
-        # on the white canvas created before, set the pixels that have the value under the threshold (so they belong to the drawing) to black (0) => you have extracted the drawing in a sharper version 
-        threshed[mask] = 0
-    # print(image)
-    # print(threshed)
-    return threshed
+    else:
+        threshold = 255
+        
+    return threshold
 
 def expandDrawing(image):
-    new_image = sharpenDrawing(image)
+    # new_image = sharpenDrawing(image)
 
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (6, 6))
     # background = cv2.bitwise_not(background)

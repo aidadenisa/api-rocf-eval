@@ -63,7 +63,7 @@ def label_conv(s):
     if s == 'DEMENZA':
         return 2
 
-def find_line(image, points, predictionComplexScores):
+def find_line(image, points, predictionComplexScores, threshold):
 
     # identify the 5 points of interest the homogram 
     # points = np.array(file_homog.loc[img_path[:-4]].to_numpy()[0])
@@ -76,11 +76,12 @@ def find_line(image, points, predictionComplexScores):
     #compute the homography for the point corresponding to the rhomb
     r_points = homography.computeHomographyRhomb(points)
 
-    grayscale = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     # transform the black zones resulted from the homography transformation in the color of the paper
-    img = homography.unique_color(grayscale)
+    # img = homography.unique_color(image)
     # img = homography.unique_color(cv2.imread(os.path.join(hom_folder, img_path), cv2.IMREAD_GRAYSCALE))
     #img = cv2.blur(img, (3, 3))
+
+    img = image
 
     #initialize the drawing as an array of 0s, in the shape of the image + 3 
     drawing = np.zeros((img.shape[0], img.shape[1], 3))
@@ -105,19 +106,19 @@ def find_line(image, points, predictionComplexScores):
     drawing, results[5], oriz_coord = pat6.get_score(ret_fig, diag1, diag2)    
 
     pat3 = pattern3.Pattern3(img, drawing, retrieveModel('rett_diag_model.joblib'),  retrieveModel('rett_diag_scaler.joblib'), retrieveModel('rett_diag_score_model.joblib'), retrieveModel('rett_diag_score_scaler.joblib'), predictionComplexScores)
-    drawing, results[2] = pat3.get_score(ret_fig, diag1, diag2, oriz_coord)   
+    drawing, results[2] = pat3.get_score(ret_fig, diag1, diag2, oriz_coord, threshold)   
     
     pat5 = pattern5.Pattern5(img, drawing, retrieveModel('cross_model.joblib'), retrieveModel('cross_scaler.joblib'), retrieveModel('cross_score_model.joblib'), retrieveModel('cross_score_scaler.joblib'), predictionComplexScores)
-    drawing, results[4] = pat5.get_score()   
+    drawing, results[4] = pat5.get_score(threshold)   
     
     pat4 = pattern4.Pattern4(img, drawing, diag1, oriz_coord)
-    drawing, results[3] = pat4.get_score(diag1, ret_fig) 
+    drawing, results[3] = pat4.get_score(diag1, ret_fig, threshold) 
     
     pat7 = pattern7.Pattern7(img, drawing)
     drawing, results[6], vert = pat7.get_score(ret_fig, diag1, diag2)
     
     pat8 = pattern8.Pattern8(img, drawing, diag1, diag2, vert, oriz_coord)
-    drawing, results[7] = pat8.get_score() 
+    drawing, results[7] = pat8.get_score(threshold) 
     
     pat9 = pattern9.Pattern9(img, drawing, vert)
     drawing, results[8] = pat9.get_score(ret_fig, vert)
@@ -133,7 +134,7 @@ def find_line(image, points, predictionComplexScores):
     drawing, results[11] = pat12.get_score()
     
     pat13 = pattern13.Pattern13(img, drawing, r_points, ret_fig)
-    drawing, results[12] = pat13.get_score() 
+    drawing, results[12] = pat13.get_score(threshold) 
        
     pat14 = pattern14.Pattern14(img, drawing, r_points)
     drawing, results[13], rhomb_fig = pat14.get_score(r_points, diag1, diag2)
@@ -166,12 +167,12 @@ def find_line(image, points, predictionComplexScores):
     return results.astype(np.uint8)
 
 
-def predictScores(image, points, predictionComplexScores):
+def predictScores(image, points, predictionComplexScores, threshold):
 
     name = "newImage"
 
     # identify the patterns in the image
-    results = find_line(image, points, predictionComplexScores)
+    results = find_line(image, points, predictionComplexScores, threshold)
 
     df = pd.DataFrame([results], columns=pattern_list)
 

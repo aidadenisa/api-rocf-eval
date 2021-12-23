@@ -4,7 +4,6 @@ import pandas as pd
 from skimage.morphology import skeletonize
 from shapely.geometry import Polygon, Point, LineString
 
-from preprocessing.homography import sharpenDrawing
 from prediction.image_processing import getBackground, draw_contours
 
 def best_line(backgrounds, idx, only_length, h=True, draw=False, drawing=None):

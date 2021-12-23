@@ -9,24 +9,25 @@ from shapely.ops import unary_union
 from preprocessing.homography import unique_color, maxDeviationThresh
 from prediction.image_processing import draw_contours
 
-#TODO: TRY TO EXTRACT IT, IT HAS A THRESH_VALUE returned
-def extract_drawing(image):
-    dst = cv2.bilateralFilter(image, 10, sigmaColor=15, sigmaSpace=15)
-    # dst = img.copy()
-    # max_occ = np.bincount(dst[dst > 0]).argmax()
-    # dst[dst == 0] = max_occ
-    threshed = np.ones(dst.shape, np.uint8) * 255
-    thresh_val = 0
-    if np.any(dst < 255):
-        hist, _ = np.histogram(dst[dst < 255].flatten(), range(257))
-        thresh_val = maxDeviationThresh(hist)
-        #print(thresh_val)
-        mask = dst < thresh_val
-        threshed[mask] = 0
-    return threshed, thresh_val
+# #TODO: TRY TO EXTRACT IT, IT HAS A THRESH_VALUE returned
+# def extract_drawing(image):
+#     dst = cv2.bilateralFilter(image, 10, sigmaColor=15, sigmaSpace=15)
+#     # dst = img.copy()
+#     # max_occ = np.bincount(dst[dst > 0]).argmax()
+#     # dst[dst == 0] = max_occ
+#     threshed = np.ones(dst.shape, np.uint8) * 255
+#     thresh_val = 0
+#     if np.any(dst < 255):
+#         hist, _ = np.histogram(dst[dst < 255].flatten(), range(257))
+#         thresh_val = maxDeviationThresh(hist)
+#         #print(thresh_val)
+#         mask = dst < thresh_val
+#         threshed[mask] = 0
+#     return threshed, thresh_val
 
 #TODO: CANNOT BE EXTRACTED EASILY, IT HAS THE THRESH VALUE
-def getBackground(external, img, morph=True, ret_hier=False, internal=None):
+def getBackground(external, img, morph=True, ret_hier=False, internal=None, threshold=None):
+    # TODO: FIX WHITE BACKGROUND!
     points = np.array(external)
     interval = (max(points[:,1])-min(points[:,1]), max(points[:,0])-min(points[:,0]))
     points_scaled = points.copy()
@@ -37,10 +38,10 @@ def getBackground(external, img, morph=True, ret_hier=False, internal=None):
     image_interval = img[min(points[:,1]):max(points[:,1]), min(points[:,0]):max(points[:,0])]
     background_t = cv2.bitwise_and(image_interval, background_t)
     
-    background_t = unique_color(background_t)
+    # background_t = unique_color(background_t)
     
-    background_t, t_val = extract_drawing(background_t)
-    if t_val > 246:
+    # background_t, t_val = extract_drawing(background_t)
+    if threshold > 246:
         background_t = np.ones(interval, dtype=np.uint8) * 255
     background = np.ones_like(img) * 255
     background[min(points[:,1]):max(points[:,1]), min(points[:,0]):max(points[:,0])] = background_t
@@ -166,11 +167,11 @@ class Pattern13:
     self.line2 = line2
     self.limit = r_points
 
-  def count_line(self, externals):    
+  def count_line(self, externals, threshold=None):    
     lines_found = []
     ex_idx = 0
     while ex_idx < len(externals):
-      background, cnt = getBackground(externals[ex_idx], self.img)
+      background, cnt = getBackground(externals[ex_idx], self.img, threshold=threshold)
       result = best_line([background], 0, False, externals[ex_idx])
       if result is not None:
         (lefty, max_left), (righty, max_right), drawing = result
@@ -189,8 +190,8 @@ class Pattern13:
         ex_idx += 1
     return np.array(lines_found)
 
-  def get_score(self):
-    lines_found = self.count_line(self.externals)
+  def get_score(self, threshold):
+    lines_found = self.count_line(self.externals, threshold=threshold)
     rect_or = None    
     if lines_found.shape[0] >= 1:    
       (lefty, max_left), (righty, max_right) = lines_found[0]             

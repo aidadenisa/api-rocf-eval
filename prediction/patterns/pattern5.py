@@ -7,21 +7,21 @@ from skimage.morphology import skeletonize
 
 from preprocessing.homography import maxDeviationThresh
 
-# TODO: SEE IF WE CAN EXTRACT THIS IN THE FUTURE
-def extract_drawing(image):
-    dst = cv2.bilateralFilter(image, 10, sigmaColor=15, sigmaSpace=15)
-    # dst = img.copy()
-    # max_occ = np.bincount(dst[dst > 0]).argmax()
-    # dst[dst == 0] = max_occ
-    threshed = np.ones(dst.shape, np.uint8) * 255
-    thresh_val = 0
-    if np.any(dst < 255):
-        hist, _ = np.histogram(dst[dst < 255].flatten(), range(257))
-        thresh_val = maxDeviationThresh(hist)
-        #print(thresh_val)
-        mask = dst < thresh_val
-        threshed[mask] = 0
-    return threshed, thresh_val
+# # TODO: SEE IF WE CAN EXTRACT THIS IN THE FUTURE
+# def extract_drawing(image):
+#     dst = cv2.bilateralFilter(image, 10, sigmaColor=15, sigmaSpace=15)
+#     # dst = img.copy()
+#     # max_occ = np.bincount(dst[dst > 0]).argmax()
+#     # dst[dst == 0] = max_occ
+#     threshed = np.ones(dst.shape, np.uint8) * 255
+#     thresh_val = 0
+#     if np.any(dst < 255):
+#         hist, _ = np.histogram(dst[dst < 255].flatten(), range(257))
+#         thresh_val = maxDeviationThresh(hist)
+#         #print(thresh_val)
+#         mask = dst < thresh_val
+#         threshed[mask] = 0
+#     return threshed, thresh_val
 
 
 def best_line(backgrounds, idx, only_length, external, draw=False):
@@ -85,7 +85,8 @@ def int_coverage(lines_filtered, external, drawing=False):
     return coverage
 
 # not the same as the others 
-def getBackground(external, img, morph=False, ret_hier=False, internal=None):
+def getBackground(external, img, morph=False, ret_hier=False, internal=None, threshold=None):
+    # TODO: FIX WHITE BACKGROUND!
     points = np.array(external)
     interval = (max(points[:, 1]) - min(points[:, 1]), max(points[:, 0]) - min(points[:, 0]))
     points_scaled = points.copy()
@@ -98,9 +99,9 @@ def getBackground(external, img, morph=False, ret_hier=False, internal=None):
     # overlap = cv2.polylines(cv2.cvtColor(img.copy(), cv2.COLOR_GRAY2RGB), [points.reshape(4,1,2)], True, (255, 0, 0), 1)
     # plt.imshow(overlap)
     # plt.show()
-    background_t[background_t == 0] = 255
-    background_t, t_val = extract_drawing(background_t)
-    if t_val > 245:
+    # background_t[background_t == 0] = 255
+    # background_t, t_val = extract_drawing(background_t)
+    if threshold > 245:
         background_t = np.ones(interval, dtype=np.uint8) * 255
     background = np.ones_like(img) * 255
     background[min(points[:, 1]):max(points[:, 1]), min(points[:, 0]):max(points[:, 0])] = background_t
@@ -125,12 +126,12 @@ def getBackground(external, img, morph=False, ret_hier=False, internal=None):
     else:
         return background, cnts
 
-def get_score_externals(externals, img):
+def get_score_externals(externals, img, threshold=None):
     backgrounds = []
     cnts = []
     rect_or = None
     for external in externals:
-      background, cnt = getBackground(external, img)
+      background, cnt = getBackground(external, img, threshold=threshold)
       backgrounds.append(background)
       cnts.append(cnt)
     best_diff = np.inf
@@ -162,7 +163,7 @@ def get_score_externals(externals, img):
     return label_diag_line, None
 
 
-def get_diag(bbox, img):
+def get_diag(bbox, img, threshold=None):
     pad_v = 10
     pad_move = 20
     if bbox[1][0] > 380:
@@ -177,7 +178,7 @@ def get_diag(bbox, img):
         externals.append([(external[0][0], external[0][1] - i * pad_move), (external[1][0], external[1][1] - i * pad_move),
                           (external[2][0], external[2][1] - i * pad_move), (external[3][0], external[3][1] - i * pad_move)])
         i += 1
-    label, rect_or = get_score_externals(externals, img)
+    label, rect_or = get_score_externals(externals, img, threshold)
     if label == 3:
         if 230 < rect_or[0][1] < 360 and rect_or[0][1] > bbox[0][1] + dist:
             return 3, rect_or
@@ -198,21 +199,21 @@ class Pattern5:
     self.s = s
     self.predictionComplexScores = predictionComplexScores
   
-  def get_score(self):
+  def get_score(self, threshold=None):
     coords = [324,119,378,373]
     
     if self.predictionComplexScores:
         rail_bbox = self.predictionComplexScores['rect'][4]
         external = [(rail_bbox[0], rail_bbox[1]), (rail_bbox[0] + rail_bbox[2], rail_bbox[1]),(rail_bbox[0] + rail_bbox[2], rail_bbox[1] + rail_bbox[3]),
                     (rail_bbox[0], rail_bbox[1] + rail_bbox[3])]
-        background_rail, _ = getBackground(external, self.img, False)
+        background_rail, _ = getBackground(external, self.img, threshold=threshold)
         pixel_rail = np.sum(np.divide(background_rail, 255))
         rail_prediction = self.model_diag.predict(self.scaler_diag.transform(np.array([pixel_rail]).reshape(-1, 1)))
         score_rail = self.s.transform(np.array(self.predictionComplexScores['scores'][0]).reshape(-1,1))
         rail_score = self.m.predict(score_rail)        
         if rail_score == 1:
             self.drawing = cv2.rectangle(self.drawing, (rail_bbox[0], rail_bbox[1]), (rail_bbox[0] + rail_bbox[2], rail_bbox[1] + rail_bbox[3]), (255, 0, 0), 2)
-            result = get_diag(external, self.img)
+            result = get_diag(external, self.img,threshold=threshold)
             if result[0] != 0:
                 label_rail, l = result
                 self.drawing = cv2.line(self.drawing, tuple(l[0]), tuple(l[1]), (0, 0, 255), 2)

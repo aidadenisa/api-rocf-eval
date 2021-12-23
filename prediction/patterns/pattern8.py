@@ -8,24 +8,25 @@ from shapely.ops import unary_union
 from preprocessing.homography import unique_color, maxDeviationThresh
 from prediction.image_processing import draw_contours
 
-# TODO: SEE IF WE CAN EXTRACT THIS
-def extract_drawing(image):
-    dst = cv2.bilateralFilter(image, 10, sigmaColor=15, sigmaSpace=15)
-    # dst = img.copy()
-    # max_occ = np.bincount(dst[dst > 0]).argmax()
-    # dst[dst == 0] = max_occ
-    threshed = np.ones(dst.shape, np.uint8) * 255
-    thresh_val = 0
-    if np.any(dst < 255):
-        hist, _ = np.histogram(dst[dst < 255].flatten(), range(257))
-        thresh_val = maxDeviationThresh(hist)
-        #print(thresh_val)
-        mask = dst < thresh_val
-        threshed[mask] = 0
-    return threshed, thresh_val
+# # TODO: SEE IF WE CAN EXTRACT THIS
+# def extract_drawing(image):
+#     dst = cv2.bilateralFilter(image, 10, sigmaColor=15, sigmaSpace=15)
+#     # dst = img.copy()
+#     # max_occ = np.bincount(dst[dst > 0]).argmax()
+#     # dst[dst == 0] = max_occ
+#     threshed = np.ones(dst.shape, np.uint8) * 255
+#     thresh_val = 0
+#     if np.any(dst < 255):
+#         hist, _ = np.histogram(dst[dst < 255].flatten(), range(257))
+#         thresh_val = maxDeviationThresh(hist)
+#         #print(thresh_val)
+#         mask = dst < thresh_val
+#         threshed[mask] = 0
+#     return threshed, thresh_val
 
 #not the same, cannot be extracted
-def getBackground(external, img, show=False, morph=False, ret_hier=False, internal=None):
+def getBackground(external, img, show=False, morph=False, ret_hier=False, internal=None, threshold=None):
+    # TODO: FIX WHITE BACKGROUND!
     points = np.array(external)
     interval = (max(points[:,1])-min(points[:,1]), max(points[:,0])-min(points[:,0]))
     points_scaled = points.copy()
@@ -39,12 +40,12 @@ def getBackground(external, img, show=False, morph=False, ret_hier=False, intern
         overlap = cv2.polylines(cv2.cvtColor(img.copy(), cv2.COLOR_GRAY2RGB), [points.reshape(4,1,2)], True, (255, 0, 0), 1)
         # plt.imshow(overlap)
         # plt.show()
-    background_t = unique_color(background_t)
+    # background_t = unique_color(background_t)
     # if show:
     #     plt.imshow(background_t, cmap='gray')
     #     plt.show()
-    background_t, t_val = extract_drawing(background_t)
-    if t_val > 246:
+    # background_t, t_val = extract_drawing(background_t)
+    if threshold > 246:
         background_t = np.ones(interval, dtype=np.uint8) * 255
     background = np.ones_like(img) * 255
     background[min(points[:,1]):max(points[:,1]), min(points[:,0]):max(points[:,0])] = background_t
@@ -202,14 +203,14 @@ class Pattern8:
     self.vert = verticale
     self.diag = diagonale
 
-  def count_line(self, externals):    
+  def count_line(self, externals, threshold=None):    
     lines_found = []
     last_best_cov = 0
     ex_idx = 0
     while ex_idx < len(externals):
-      background1, cnt1 = getBackground(externals[ex_idx], self.img)
-      background2, cnt2 = getBackground(externals[ex_idx + 1], self.img)
-      background3, cnt3 = getBackground(externals[ex_idx + 2], self.img)
+      background1, cnt1 = getBackground(externals[ex_idx], self.img, threshold=threshold)
+      background2, cnt2 = getBackground(externals[ex_idx + 1], self.img, threshold=threshold)
+      background3, cnt3 = getBackground(externals[ex_idx + 2], self.img, threshold=threshold)
       result1 = best_line([background1], 0, False, externals[ex_idx])
       result2 = best_line([background2], 0, False, externals[ex_idx + 1])
       result3 = best_line([background3], 0, False, externals[ex_idx + 2])
@@ -249,8 +250,8 @@ class Pattern8:
       ex_idx += 3
     return np.array(lines_found)
 
-  def get_score(self):
-    lines_found = self.count_line(self.externals)
+  def get_score(self, threshold):
+    lines_found = self.count_line(self.externals, threshold=threshold)
 
     if lines_found.shape[0] > 0:    
       for l in lines_found:

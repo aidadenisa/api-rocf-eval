@@ -7,23 +7,24 @@ from shapely.geometry import Polygon, Point, LineString
 from preprocessing.homography import maxDeviationThresh
 from prediction.image_processing import draw_contours
 
-# TODO: TRY TO EXTRACT THIS VERSION
-def extract_drawing(image):
-    dst = cv2.bilateralFilter(image, 10, sigmaColor=15, sigmaSpace=15)
-    # dst = img.copy()
-    # max_occ = np.bincount(dst[dst > 0]).argmax()
-    # dst[dst == 0] = max_occ
-    threshed = np.ones(dst.shape, np.uint8) * 255
-    thresh_val = 0
-    if np.any(dst < 255):
-        hist, _ = np.histogram(dst[dst < 255].flatten(), range(257))
-        thresh_val = maxDeviationThresh(hist)
-        mask = dst < thresh_val
-        threshed[mask] = 0
-    return threshed, thresh_val
+# # TODO: TRY TO EXTRACT THIS VERSION
+# def extract_drawing(image):
+#     dst = cv2.bilateralFilter(image, 10, sigmaColor=15, sigmaSpace=15)
+#     # dst = img.copy()
+#     # max_occ = np.bincount(dst[dst > 0]).argmax()
+#     # dst[dst == 0] = max_occ
+#     threshed = np.ones(dst.shape, np.uint8) * 255
+#     thresh_val = 0
+#     if np.any(dst < 255):
+#         hist, _ = np.histogram(dst[dst < 255].flatten(), range(257))
+#         thresh_val = maxDeviationThresh(hist)
+#         mask = dst < thresh_val
+#         threshed[mask] = 0
+#     return threshed, thresh_val
 
 # a bit different than the most common version => cannot extract it
-def getBackground(external, img, morph=False, ret_hier=False, internal=None):
+def getBackground(external, img, morph=False, ret_hier=False, internal=None, threshold=None):
+    # TODO: FIX WHITE BACKGROUND!
     points = np.array(external)
     interval = (max(points[:,1])-min(points[:,1]), max(points[:,0])-min(points[:,0]))
     points_scaled = points.copy()
@@ -36,9 +37,9 @@ def getBackground(external, img, morph=False, ret_hier=False, internal=None):
     #overlap = cv2.polylines(cv2.cvtColor(img.copy(), cv2.COLOR_GRAY2RGB), [points.reshape(4,1,2)], True, (255, 0, 0), 1)
     #plt.imshow(overlap)
     #plt.show()
-    background_t[background_t == 0] = 255
-    background_t, t_val = extract_drawing(background_t)
-    if t_val > 245:
+    # background_t[background_t == 0] = 255
+    # background_t, t_val = extract_drawing(background_t)
+    if threshold > 245:
         background_t = np.ones(interval, dtype=np.uint8) * 255
     background = np.ones_like(img) * 255
     background[min(points[:,1]):max(points[:,1]), min(points[:,0]):max(points[:,0])] = background_t
@@ -168,11 +169,11 @@ class Pattern4:
             (diag_eq(diagonale, external1[2][1] + i * pad_move - pad_move_d), external1[2][1] + i * pad_move - pad_move_d), (external1[3][0], external1[3][1] + i * pad_move + pad_move_d)])
       i += 1
 
-  def count_line(self, externals):    
+  def count_line(self, externals, threshold=None):    
     lines_found = []
     ex_idx = 0
     while ex_idx < len(externals):
-      background, cnt = getBackground(externals[ex_idx], self.img)
+      background, cnt = getBackground(externals[ex_idx], self.img, threshold=threshold)
       result = best_line([background], 0, False, externals[ex_idx])
       if result is not None:
         (max_left, lefty), (max_right, righty), drawing = result
@@ -191,9 +192,9 @@ class Pattern4:
         ex_idx += 1
     return np.array(lines_found)
 
-  def get_score(self, diag1, rect):    
+  def get_score(self, diag1, rect, threshold):    
 
-    lines_found = self.count_line(self.externals)
+    lines_found = self.count_line(self.externals, threshold=threshold)
     rect_or = None
     
     if lines_found.shape[0] >= 2:    

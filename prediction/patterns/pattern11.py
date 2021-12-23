@@ -5,7 +5,6 @@ from skimage.morphology import skeletonize
 from shapely.geometry import Polygon, Point, LineString
 
 from prediction.image_processing import getBackground, draw_contours
-# from preprocessing.homography import maxDeviationThresh, sharpenDrawing
 
 def best_line(backgrounds, idx, only_length, external, h=True, draw=False, drawing=None):
     background = backgrounds[idx]    

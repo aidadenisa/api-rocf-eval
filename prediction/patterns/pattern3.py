@@ -85,12 +85,12 @@ def best_line(backgrounds, idx, only_length, external, draw=False):
                 return (max_left, lefty), (max_right, righty)
         return None
 
-def get_score_externals(externals, img):
+def get_score_externals(externals, img, threshold=None):
     backgrounds = []
     cnts = []
     rect_or = None
     for external in externals:
-      background, cnt = getBackground(external, img)
+      background, cnt = getBackground(external, img, threshold=threshold)
       backgrounds.append(background)
       cnts.append(cnt)
     best_diff = np.inf
@@ -140,14 +140,15 @@ def get_diag(bbox, img):
 
 
 # TODO: TRY TO MAKE THEM RESPECT INTEGRATED AS THE OTHERS IN IMAGE_PROCESSING
-def getBackground(external, img, morph=True, ret_hier=False):
+def getBackground(external, img, morph=True, ret_hier=False, threshold=None):
+    # TODO: FIX WHITE BACKGROUND!
     background = np.zeros_like(img)
     points = np.array([external]).reshape((4, 1, 2))
     background = cv2.fillConvexPoly(background, points, (255, 255, 255))
     background = cv2.bitwise_and(img, background)    
-    background[background == 0] = 255
-    background, t_val = extract_drawing(background)
-    if t_val > 245:
+    # background[background == 0] = 255
+    # background, t_val = extract_drawing(background, threshold=threshold)
+    if threshold > 245:
         background = np.ones_like(img) * 255   
     background = cv2.bitwise_not(background)
     background = skeletonize(background / 255, method='lee').astype(np.uint8)
@@ -159,17 +160,17 @@ def getBackground(external, img, morph=True, ret_hier=False):
     else:
         return background, cnts
 
-def extract_drawing(image):
-    dst = cv2.bilateralFilter(image, 10, sigmaColor=15, sigmaSpace=15)
-    threshed = np.ones(dst.shape, np.uint8) * 255
-    thresh_val = 0
-    if np.any(dst < 255):
-        hist, _ = np.histogram(dst[dst < 255].flatten(), range(257))
-        thresh_val = homography.maxDeviationThresh(hist)
-        #print(thresh_val)
-        mask = dst < thresh_val
-        threshed[mask] = 0
-    return threshed, thresh_val
+# def extract_drawing(image):
+#     dst = cv2.bilateralFilter(image, 10, sigmaColor=15, sigmaSpace=15)
+#     threshed = np.ones(dst.shape, np.uint8) * 255
+#     thresh_val = 0
+#     if np.any(dst < 255):
+#         hist, _ = np.histogram(dst[dst < 255].flatten(), range(257))
+#         thresh_val = homography.maxDeviationThresh(hist)
+#         #print(thresh_val)
+#         mask = dst < thresh_val
+#         threshed[mask] = 0
+#     return threshed, thresh_val
 
 #######
 
@@ -184,7 +185,7 @@ class Pattern3:
     self.s = s
     self.predictionComplexScores = predictionComplexScores
   
-  def get_score(self, rect, diag1, diag2, oriz):
+  def get_score(self, rect, diag1, diag2, oriz, threshold):
     coords = [379, 300, 502, 456]
     # df_rail = pd.read_csv(DLScoresPath, header=0, usecols=['names', 'scores', 'rect'], index_col='names', converters={'scores': to_float, 'rect': to_tuple})
 
@@ -195,7 +196,7 @@ class Pattern3:
     # if self.img_path[:-4] in df_rail.index:
     if self.predictionComplexScores: 
       external = [(rail_bbox[0], rail_bbox[1]), (rail_bbox[0]+rail_bbox[2], rail_bbox[1]), (rail_bbox[0]+rail_bbox[2], rail_bbox[1]+rail_bbox[3]), (rail_bbox[0], rail_bbox[1]+rail_bbox[3])]
-      background_rail, _ = getBackground(external, self.img, False)
+      background_rail, _ = getBackground(external, self.img, threshold=threshold)
       pixel_rail = np.sum(np.divide(background_rail, 255))
       #rail_prediction, diags = get_diag(external, self.img)
       rail_prediction = self.model_diag.predict(self.scaler_diag.transform(np.array([pixel_rail]).reshape(-1, 1)))
@@ -251,7 +252,7 @@ class Pattern3:
       w = np.abs(coords[0] - coords[2])
       h = np.abs(coords[1] - coords[3])
       external = [(x, y), (x+w, y), (x+w, y+h), (x, y+h)]
-      background_rail, _ = getBackground(external, self.img, False)
+      background_rail, _ = getBackground(external, self.img, threshold=threshold)
       pixel_rail = np.sum(np.divide(background_rail, 255))
       rail_prediction = self.model_diag.predict(self.scaler_diag.transform(np.array([pixel_rail]).reshape(-1,1)))
       if rail_prediction == 1:

@@ -43,6 +43,7 @@ prediction_post_args.add_argument("patientCode", type=str, help="Patient code is
 prediction_post_args.add_argument("points", type=list, location="json", help="Image is missing", required=True)
 prediction_post_args.add_argument("date", type=inputs.datetime_from_iso8601, help="Datetime is missing", required=True)
 prediction_post_args.add_argument("imageb64", type=str, help="Image is missing", required=True)
+prediction_post_args.add_argument("threshold", type=str, help="Threshold is missing", required=False)
 
 revision_post_args = reqparse.RequestParser()
 revision_post_args.add_argument("_rocfEvaluationId", type=str, help="Evaluation code is missing", required=True)
@@ -154,17 +155,27 @@ class Prediction(Resource):
         args = prediction_post_args.parse_args()
         img = homography.convertImageB64ToMatrix(args['imageb64'])
 
+        # For testing purposes, you can use this: 
+        predictionComplexScores = {
+            "names": "Immagini-01",
+            "scores": [305.1994, 19.02158, 69.96901, 144.1374, 40.056805, 11.410182, 24.091259],
+            "distances": [41.23105625617661, 56.568542494923804, 10.0, 91.92388155425118, 53.85164807134504, 31.622776601683793, 36.05551275463989],
+            "rect": [(334, 159, 54, 254), (782, 327, 87, 86), (607, 383, 230, 151), (792, 169, 268, 312), (399, 250, 123, 156), (350, 555, 150, 155), (482, 510, 308, 121)]
+        }
+
+        # PREPROCESSING
+        threshold = 255
+        img = homography.adjustImage(img)
+        if args["threshold"] is None: 
+            threshold = homography.getThreshold(img)
+            img = homography.sharpenDrawing(img)
+        else:
+            threshold = args["threshold"]
+            img = homography.sharpenDrawing(img, threshold)
+
         
-        #For testing purposes, you can use this: 
-        # predictionComplexScores = {
-        #     "names": "Immagini-01",
-        #     "scores": [305.1994, 19.02158, 69.96901, 144.1374, 40.056805, 11.410182, 24.091259],
-        #     "distances": [41.23105625617661, 56.568542494923804, 10.0, 91.92388155425118, 53.85164807134504, 31.622776601683793, 36.05551275463989],
-        #     "rect": [(334, 159, 54, 254), (782, 327, 87, 86), (607, 383, 230, 151), (792, 169, 268, 312), (399, 250, 123, 156), (350, 555, 150, 155), (482, 510, 308, 121)]
-        # }
-        
-        predictionComplexScores = predict_complex_scores.predictComplexScores(img, args['points'])
-        predictionTotalScores = predict_simple_scores.predictScores(img, args['points'], predictionComplexScores)
+        # predictionComplexScores = predict_complex_scores.predictComplexScores(img, args['points'])
+        predictionTotalScores = predict_simple_scores.predictScores(img, args['points'], predictionComplexScores, threshold=threshold)
         scores = utils.generateScoresFromPrediction(predictionTotalScores)
 
         # test = [2, 1, 1, 0, 0, 3, 3, 1, 2, 1, 3, 1, 1, 3, 2, 3, 1, 1]
@@ -180,6 +191,7 @@ class Prediction(Resource):
         result["_id"] = str(insertResult.inserted_id)
         return result
 
+    # THIS IS THE ENDPOINT THAT IS ACCESSED FROM THE CLIENT
     @cross_origin()
     @marshal_with(prediction_response)
     def put(self):
@@ -234,14 +246,22 @@ class ROCFRevisions(Resource):
         
         return fixJSON(result), 200
 
-
-# TODO: to be deleted
-# api.add_resource(HelloWorld, "/helloworld/<string:name>")
-# api.add_resource(HelloWorld,'/api/hello/world',endpoint='world',methods=['GET'])
-
-
 def ROCFevaluate(args, DBobject):
     img = homography.convertImageB64ToMatrix(args['imageb64'])
+    
+    
+    # TODO: TO FIX: PREPROCESSING
+    threshold = 255
+    img = homography.adjustImage(img, gamma=0.7)
+    if args["threshold"] is None: 
+        threshold = homography.getThreshold(img)
+        img = homography.sharpenDrawing(img)
+    else:
+        threshold = args["threshold"]
+        img = homography.sharpenDrawing(img, threshold)
+
+
+
     # For testing purposes, you can use this: 
     # predictionComplexScores = {
     #     "names": "Immagini-01",
@@ -251,7 +271,7 @@ def ROCFevaluate(args, DBobject):
     # }
     
     predictionComplexScores = predict_complex_scores.predictComplexScores(img, args['points'])
-    predictionTotalScores = predict_simple_scores.predictScores(img, args['points'], predictionComplexScores)
+    predictionTotalScores = predict_simple_scores.predictScores(img, args['points'], predictionComplexScores, threshold=threshold)
 
     #TESTT
     # predictionTotalScores = [2, 1, 1, 0, 0, 3, 3, 1, 2, 1, 3, 1, 1, 3, 2, 3, 1, 1]

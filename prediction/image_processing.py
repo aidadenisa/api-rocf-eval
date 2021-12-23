@@ -7,12 +7,20 @@ from preprocessing import homography
 def getBackground(external, img, morph=True, ret_hier=False, internal=None):
     #initialize the background with 0s
     background = np.zeros_like(img)
+    #create a white background
+    white_bg = np.zeros([img.shape[0],img.shape[1]],dtype=np.uint8) 
+    white_bg.fill(255) # or img[:] = 255
+
     #get the points of the external ROI and reshape them for the fillConvexPoly function
     points = np.array([external]).reshape((4, 1, 2))
     #create a fill for the shape that is determined by the points, and fill it with the color white
     background = cv2.fillConvexPoly(background, points, (255, 255, 255))
+    # create a mask with true outside the ROI (opposite of current bg)
+    not_background = cv2.bitwise_not(background)
     #take from the image the content that is inside the mask formed by the background array, which has white values just in the shape of the external ROI
-    background = cv2.bitwise_and(img, background)    
+    background = cv2.bitwise_and(img, background)   
+    #create an image that is white on the mask outside the ROI
+    not_background_img = cv2.bitwise_and(white_bg, not_background)    
     if internal is not None:
       #get the points representing the internal ROI and reshape them for the fillConvexPoly function
       int_points = np.array([internal]).reshape((4, 1, 2))
@@ -21,10 +29,13 @@ def getBackground(external, img, morph=True, ret_hier=False, internal=None):
     '''overlap = cv2.polylines(cv2.cvtColor(img.copy(), cv2.COLOR_GRAY2RGB), [points], True, (255, 0, 0), 1)    
     plt.imshow(overlap)
     plt.show()'''
-    #all the background colors that are black (0) get transformed into white (255)
-    background[background == 0] = 255
     # extract the drawing in a sharper version, by using unimodal thresholding
-    background = homography.sharpenDrawing(background)
+    # background = homography.sharpenDrawing(background)
+
+    #all the black (0) margins outside of the ROI have to be turned to white (255)
+    # equivalent of the (background[background == 0] = 255) from before
+    background = cv2.bitwise_or(not_background_img,background)
+
     if morph:
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9))
         # background = cv2.bitwise_not(background)
