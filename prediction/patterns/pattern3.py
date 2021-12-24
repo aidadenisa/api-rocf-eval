@@ -141,13 +141,16 @@ def get_diag(bbox, img):
 
 # TODO: TRY TO MAKE THEM RESPECT INTEGRATED AS THE OTHERS IN IMAGE_PROCESSING
 def getBackground(external, img, morph=True, ret_hier=False, threshold=None):
-    # TODO: FIX WHITE BACKGROUND!
     background = np.zeros_like(img)
     points = np.array([external]).reshape((4, 1, 2))
     background = cv2.fillConvexPoly(background, points, (255, 255, 255))
-    background = cv2.bitwise_and(img, background)    
+    not_background = cv2.bitwise_not(background)
+
+    background = cv2.bitwise_and(img, background)  
     # background[background == 0] = 255
     # background, t_val = extract_drawing(background, threshold=threshold)
+    background = cv2.bitwise_or(not_background,background)
+
     if threshold > 245:
         background = np.ones_like(img) * 255   
     background = cv2.bitwise_not(background)

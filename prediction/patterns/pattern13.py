@@ -27,7 +27,6 @@ from prediction.image_processing import draw_contours
 
 #TODO: CANNOT BE EXTRACTED EASILY, IT HAS THE THRESH VALUE
 def getBackground(external, img, morph=True, ret_hier=False, internal=None, threshold=None):
-    # TODO: FIX WHITE BACKGROUND!
     points = np.array(external)
     interval = (max(points[:,1])-min(points[:,1]), max(points[:,0])-min(points[:,0]))
     points_scaled = points.copy()
@@ -35,12 +34,14 @@ def getBackground(external, img, morph=True, ret_hier=False, internal=None, thre
     points_scaled[:, 1] -= min(points[:, 1])
     background_t = np.zeros(interval, dtype=np.uint8)
     background_t = cv2.fillConvexPoly(background_t, points_scaled.reshape((4, 1, 2)), 255)
+    not_background_t = cv2.bitwise_not(background_t)
     image_interval = img[min(points[:,1]):max(points[:,1]), min(points[:,0]):max(points[:,0])]
     background_t = cv2.bitwise_and(image_interval, background_t)
     
     # background_t = unique_color(background_t)
-    
     # background_t, t_val = extract_drawing(background_t)
+
+    background_t = cv2.bitwise_or(not_background_t,background_t)
     if threshold > 246:
         background_t = np.ones(interval, dtype=np.uint8) * 255
     background = np.ones_like(img) * 255

@@ -9,10 +9,10 @@ from preprocessing.homography import sharpenDrawing
 
 #TODO: TRY TO EXTRACT IT, IT HAS A DIFFERENT SKELETONIZE
 def getBackground(external, img, morph=True, ret_hier=False, internal=None):
-    # TODO: FIX WHITE BACKGROUND!
     background = np.zeros_like(img)
     points = np.array([external]).reshape((4, 1, 2))
     background = cv2.fillConvexPoly(background, points, (255, 255, 255))
+    not_background = cv2.bitwise_not(background)
     background = cv2.bitwise_and(img, background)
     if internal is not None:
       int_points = np.array([internal]).reshape((4, 1, 2))
@@ -24,6 +24,7 @@ def getBackground(external, img, morph=True, ret_hier=False, internal=None):
       plt.show()'''
     # background[background == 0] = 255
     # background = sharpenDrawing(background)
+    background = cv2.bitwise_or(not_background,background)
     if morph:
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9))
         # background = cv2.bitwise_not(background)

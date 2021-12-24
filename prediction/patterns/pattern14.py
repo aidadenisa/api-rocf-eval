@@ -11,10 +11,10 @@ from prediction.image_processing import draw_contours
 
 #TODO: TRY TO EXTRACT, IT HAS SKELETONIZE A BIT DIFFERENT
 def getBackground(external, img, morph=True, ret_hier=False):
-    # TODO: FIX WHITE BACKGROUND!
     background = np.zeros_like(img)
     points = np.array([external]).reshape((4, 1, 2))
     background = cv2.fillConvexPoly(background, points, (255, 255, 255))
+    not_background = cv2.bitwise_not(background)
     background = cv2.bitwise_and(img, background)    
     '''overlap = cv2.polylines(cv2.cvtColor(img.copy(), cv2.COLOR_GRAY2RGB), [points], True, (255, 0, 0), 1)
     if internal is not None:
@@ -23,6 +23,7 @@ def getBackground(external, img, morph=True, ret_hier=False):
       plt.show()'''
     # background[background == 0] = 255
     # background = sharpenDrawing(background)
+    background = cv2.bitwise_or(not_background,background)
     if morph:
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9))
         # background = cv2.bitwise_not(background)
