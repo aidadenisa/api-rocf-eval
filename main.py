@@ -156,12 +156,12 @@ class Prediction(Resource):
         img = homography.convertImageB64ToMatrix(args['imageb64'])
 
         # For testing purposes, you can use this: 
-        predictionComplexScores = {
-            "names": "Immagini-01",
-            "scores": [305.1994, 19.02158, 69.96901, 144.1374, 40.056805, 11.410182, 24.091259],
-            "distances": [41.23105625617661, 56.568542494923804, 10.0, 91.92388155425118, 53.85164807134504, 31.622776601683793, 36.05551275463989],
-            "rect": [(334, 159, 54, 254), (782, 327, 87, 86), (607, 383, 230, 151), (792, 169, 268, 312), (399, 250, 123, 156), (350, 555, 150, 155), (482, 510, 308, 121)]
-        }
+        # predictionComplexScores = {
+        #     "names": "Immagini-01",
+        #     "scores": [305.1994, 19.02158, 69.96901, 144.1374, 40.056805, 11.410182, 24.091259],
+        #     "distances": [41.23105625617661, 56.568542494923804, 10.0, 91.92388155425118, 53.85164807134504, 31.622776601683793, 36.05551275463989],
+        #     "rect": [(334, 159, 54, 254), (782, 327, 87, 86), (607, 383, 230, 151), (792, 169, 268, 312), (399, 250, 123, 156), (350, 555, 150, 155), (482, 510, 308, 121)]
+        # }
 
         # PREPROCESSING
         threshold = 255
@@ -172,9 +172,8 @@ class Prediction(Resource):
         else:
             threshold = args["threshold"]
             img = homography.sharpenDrawing(img, threshold)
-
         
-        # predictionComplexScores = predict_complex_scores.predictComplexScores(img, args['points'])
+        predictionComplexScores = predict_complex_scores.predictComplexScores(img, args['points'])
         predictionTotalScores = predict_simple_scores.predictScores(img, args['points'], predictionComplexScores, threshold=threshold)
         scores = utils.generateScoresFromPrediction(predictionTotalScores)
 

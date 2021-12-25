@@ -145,12 +145,8 @@ def getBackground(external, img, morph=True, ret_hier=False, threshold=None):
     points = np.array([external]).reshape((4, 1, 2))
     background = cv2.fillConvexPoly(background, points, (255, 255, 255))
     not_background = cv2.bitwise_not(background)
-
     background = cv2.bitwise_and(img, background)  
-    # background[background == 0] = 255
-    # background, t_val = extract_drawing(background, threshold=threshold)
     background = cv2.bitwise_or(not_background,background)
-
     if threshold > 245:
         background = np.ones_like(img) * 255   
     background = cv2.bitwise_not(background)
@@ -162,21 +158,6 @@ def getBackground(external, img, morph=True, ret_hier=False, threshold=None):
         return background, cnts, hier
     else:
         return background, cnts
-
-# def extract_drawing(image):
-#     dst = cv2.bilateralFilter(image, 10, sigmaColor=15, sigmaSpace=15)
-#     threshed = np.ones(dst.shape, np.uint8) * 255
-#     thresh_val = 0
-#     if np.any(dst < 255):
-#         hist, _ = np.histogram(dst[dst < 255].flatten(), range(257))
-#         thresh_val = homography.maxDeviationThresh(hist)
-#         #print(thresh_val)
-#         mask = dst < thresh_val
-#         threshed[mask] = 0
-#     return threshed, thresh_val
-
-#######
-
 
 class Pattern3:
   def __init__(self, img, drawing, model_diag, scaler_diag, m, s, predictionComplexScores):

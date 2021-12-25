@@ -9,22 +9,6 @@ from shapely.ops import unary_union
 from preprocessing.homography import unique_color, maxDeviationThresh
 from prediction.image_processing import draw_contours
 
-# #TODO: TRY TO EXTRACT IT, IT HAS A THRESH_VALUE returned
-# def extract_drawing(image):
-#     dst = cv2.bilateralFilter(image, 10, sigmaColor=15, sigmaSpace=15)
-#     # dst = img.copy()
-#     # max_occ = np.bincount(dst[dst > 0]).argmax()
-#     # dst[dst == 0] = max_occ
-#     threshed = np.ones(dst.shape, np.uint8) * 255
-#     thresh_val = 0
-#     if np.any(dst < 255):
-#         hist, _ = np.histogram(dst[dst < 255].flatten(), range(257))
-#         thresh_val = maxDeviationThresh(hist)
-#         #print(thresh_val)
-#         mask = dst < thresh_val
-#         threshed[mask] = 0
-#     return threshed, thresh_val
-
 #TODO: CANNOT BE EXTRACTED EASILY, IT HAS THE THRESH VALUE
 def getBackground(external, img, morph=True, ret_hier=False, internal=None, threshold=None):
     points = np.array(external)
@@ -37,9 +21,6 @@ def getBackground(external, img, morph=True, ret_hier=False, internal=None, thre
     not_background_t = cv2.bitwise_not(background_t)
     image_interval = img[min(points[:,1]):max(points[:,1]), min(points[:,0]):max(points[:,0])]
     background_t = cv2.bitwise_and(image_interval, background_t)
-    
-    # background_t = unique_color(background_t)
-    # background_t, t_val = extract_drawing(background_t)
 
     background_t = cv2.bitwise_or(not_background_t,background_t)
     if threshold > 246:

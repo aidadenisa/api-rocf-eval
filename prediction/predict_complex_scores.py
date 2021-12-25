@@ -41,12 +41,7 @@ def predictComplexScores(image, points):
     r_points = homography.computeHomographyRhomb(points)
     or_points2['rhomb'].insert(2, r_points[0])
 
-    #transform to grayscale if the image has more than 1 channel
-    if len(image.shape) > 2:
-        img = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    img = homography.unique_color(image)
-
-    img = cv2.medianBlur(img, 3)
+    img = image
     width = int(img.shape[1] * scale_percent / 100)
     height = int(img.shape[0] * scale_percent / 100)
     img = cv2.resize(img, (width, height), interpolation=cv2.INTER_AREA)

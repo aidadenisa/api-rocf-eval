@@ -7,23 +7,6 @@ from skimage.morphology import skeletonize
 
 from preprocessing.homography import maxDeviationThresh
 
-# # TODO: SEE IF WE CAN EXTRACT THIS IN THE FUTURE
-# def extract_drawing(image):
-#     dst = cv2.bilateralFilter(image, 10, sigmaColor=15, sigmaSpace=15)
-#     # dst = img.copy()
-#     # max_occ = np.bincount(dst[dst > 0]).argmax()
-#     # dst[dst == 0] = max_occ
-#     threshed = np.ones(dst.shape, np.uint8) * 255
-#     thresh_val = 0
-#     if np.any(dst < 255):
-#         hist, _ = np.histogram(dst[dst < 255].flatten(), range(257))
-#         thresh_val = maxDeviationThresh(hist)
-#         #print(thresh_val)
-#         mask = dst < thresh_val
-#         threshed[mask] = 0
-#     return threshed, thresh_val
-
-
 def best_line(backgrounds, idx, only_length, external, draw=False):
     background = backgrounds[idx]
     lines_filtered = cv2.HoughLinesP(background, 1, np.pi / 180, 20, None, 20, 5)
@@ -99,8 +82,6 @@ def getBackground(external, img, morph=False, ret_hier=False, internal=None, thr
     # overlap = cv2.polylines(cv2.cvtColor(img.copy(), cv2.COLOR_GRAY2RGB), [points.reshape(4,1,2)], True, (255, 0, 0), 1)
     # plt.imshow(overlap)
     # plt.show()
-    # background_t[background_t == 0] = 255
-    # background_t, t_val = extract_drawing(background_t)
     background_t = cv2.bitwise_or(not_background_t,background_t)
     if threshold > 245:
         background_t = np.ones(interval, dtype=np.uint8) * 255

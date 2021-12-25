@@ -141,18 +141,18 @@ def getThreshold(image):
 def expandDrawing(image):
     # new_image = sharpenDrawing(image)
 
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (6, 6))
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (4, 4))
     # background = cv2.bitwise_not(background)
     # doing erosion on mostly white background drawing has the opposite effect of erosion => the drawing becomes thicker
     # it is inverted by doing a bitwise_not, which will do a logical not operation
-    new_image = cv2.bitwise_not(cv2.erode(new_image, kernel))
+    new_image = cv2.bitwise_not(cv2.erode(image, kernel))
 
     # # scheletonize the currently thick drawing (Skeletonization reduces binary objects to 1 pixel wide representations. This can be useful for feature extraction, and/or representing an object’s topology.)
     # new_image = skeletonize(new_image / 255, method='lee').astype(np.uint8)
 
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (6, 6))
+    # kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (4, 4))
     # dilate the (white) skeleton drawing (on black background) by a kernel of 3x3px => add a bit of thickness
-    new_image = cv2.dilate(new_image, kernel)
+    # new_image = cv2.dilate(new_image, kernel)
 
     new_image = cv2.bitwise_not(new_image)
     return new_image

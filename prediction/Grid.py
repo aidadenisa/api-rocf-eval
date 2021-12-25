@@ -43,9 +43,10 @@ class Grid():
             x = max(0, x)
             y = max(0, y)
             ROI = image[y:y + self.h, x:x + self.w]
-            threshed =  np.array(homography.sharpenDrawing(ROI))
-            input_img = homography.background_thumbnail(threshed, 'L', (input_shape[0], input_shape[1]))
-            
+            # threshed =  np.array(homography.sharpenDrawing(ROI))
+            ROI_expanded = homography.expandDrawing(ROI)
+
+            input_img = homography.background_thumbnail(ROI_expanded, 'L', (input_shape[0], input_shape[1]))
             input_img = input_img.astype('float32')
             input_img /= 255
             input_img =  np.repeat(input_img[..., np.newaxis], 3, -1)            
@@ -56,9 +57,12 @@ class Grid():
             #inp = np.array([[input_img], [template]])
             #print(inp.shape)
             
+            # send image and template to model for prediction
             result = model.predict([[input_img.reshape(1,100,100,3)], [template.reshape(1,100,100,3)]])
             embeddings = result
+            # calculate the pairwise distance between all embeddings
             result = triplet_loss._pairwise_distances(embeddings, squared=False).numpy()[0, 0]
+            # save the minimum distance
             if result < min_val:
                 min_val = result
                 save_min = True
@@ -80,8 +84,10 @@ class Grid():
           for action in self.actions:
               (x, y, w, h) = action(min_x, min_y, min_w, min_h)
               ROI = image[y:y + h, x:x + w]
-              threshed = np.array(homography.sharpenDrawing(ROI))
-              input_img = homography.background_thumbnail(threshed, 'L',
+              # threshed = np.array(homography.sharpenDrawing(ROI))
+              ROI_expanded = homography.expandDrawing(ROI)
+            
+              input_img = homography.background_thumbnail(ROI_expanded, 'L',
                                           (input_shape[0], input_shape[1]))
               input_img = input_img.astype('float32')
               input_img /= 255
