@@ -6,7 +6,7 @@ from bson import ObjectId
 
 import redis
 from rq import Queue
-import time
+import time, datetime
 
 #TODO: in production we need a pass
 r = redis.Redis()
@@ -15,6 +15,8 @@ q = Queue(connection=r)
 from flask import Flask, request, send_from_directory
 from flask_restful import Api, Resource, reqparse, abort, fields, marshal_with, inputs
 from flask_cors import CORS, cross_origin
+from werkzeug.utils import secure_filename
+
 
 from preprocessing import homography, thresholding
 from prediction import predict_complex_scores, predict_simple_scores, model_storage, utils
@@ -30,7 +32,8 @@ mongoClient = database.initDB(app)
 db = mongoClient.db
 
 app.config['CORS_HEADERS'] = 'Content-Type'
-
+app.config['UPLOAD_EXTENSIONS'] = ['.jpg']
+app.config['UPLOAD_PATH'] = './uploads/rocfs'
 
 # TESTT stuff - For testing purposes, you can use this: 
 # predictionComplexScores = {
@@ -68,6 +71,9 @@ revision_post_args.add_argument("scores", type=list, location="json", help="Upda
 
 upload_rocf_post_args = reqparse.RequestParser()
 upload_rocf_post_args.add_argument("imageb64", type=str, help="Image is missing", required=True)
+upload_rocf_post_args.add_argument("patientCode", type=str, help="Patient code is missing", required=True)
+upload_rocf_post_args.add_argument("doctorID", type=str, help="Doctor id is missing", required=True)
+upload_rocf_post_args.add_argument("date", type=inputs.datetime_from_iso8601, help="Datetime is missing", required=True)
 
 revision_response = {
     "_id": fields.Raw(),
@@ -272,21 +278,36 @@ class ROCFRevisions(Resource):
         
         return fixJSON(result), 200
 
-# class ROCFFiles(Resource): 
-#     def get(self, filename):
-#         return send_from_directory(app.config['UPLOAD_PATH'], filename)
-#     def post(self):
-#         args = upload_rocf_post_args.parse_args()
-#         uploaded_file = args['imageb64']
-        
-#         filename = secure_filename(uploaded_file.filename)
-#         if filename != '':
-#             file_ext = os.path.splitext(filename)[1]
-#             if file_ext not in app.config['UPLOAD_EXTENSIONS'] or \
-#                     file_ext != validate_image(uploaded_file.stream):
-#                 abort(400)
-#             uploaded_file.save(os.path.join(app.config['UPLOAD_PATH'], filename))
-#         return redirect(url_for('index'))
+class ROCFFiles(Resource): 
+    def get(self, filename):
+        return send_from_directory(app.config['UPLOAD_PATH'], filename)
+
+    def post(self):
+        args = upload_rocf_post_args.parse_args()
+        uploaded_file = args['imageb64']
+        date = args["date"].strftime("%d:%m:%Y-%H:%M:%S")
+        # filename = secure_filename(uploaded_file.filename)
+        filename = args["patientCode"] + "_" + date
+        doctorFolderPath = os.path.join(app.config['UPLOAD_PATH'], args["doctorID"])
+
+        if filename != '':
+            image = base64.b64decode(uploaded_file)
+            # file_ext = os.path.splitext(filename)[1]
+            # if file_ext not in app.config['UPLOAD_EXTENSIONS']:
+            #     abort(400)
+            
+            if not os.path.isdir(app.config['UPLOAD_PATH']):
+                os.mkdir(app.config['UPLOAD_PATH'])
+            
+            if not os.path.isdir(doctorFolderPath):
+                os.mkdir(os.path.join(doctorFolderPath))
+
+            location = os.path.join(doctorFolderPath, filename + ".png")
+            
+            with open(location, "wb") as fh:
+                fh.write(image)
+                        
+        return 200
 
    
 
@@ -319,6 +340,7 @@ api.add_resource(Prediction, "/prediction")
 api.add_resource(ROCFEvaluationsList, "/rocf")
 api.add_resource(ROCFEvaluation, "/rocf/<string:id>")
 api.add_resource(ROCFRevisions, "/revision")
+api.add_resource(ROCFFiles, "/files")
 
 
 env = os.environ.get('FLASK_ENV')
