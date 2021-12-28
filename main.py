@@ -279,8 +279,9 @@ class ROCFRevisions(Resource):
         return fixJSON(result), 200
 
 class ROCFFiles(Resource): 
-    def get(self, filename):
-        return send_from_directory(app.config['UPLOAD_PATH'], filename)
+    def get(self, docID, filename):
+        doctorFolderPath = os.path.join(app.config['UPLOAD_PATH'], docID)
+        return send_from_directory(doctorFolderPath, filename)
 
     def post(self):
         args = upload_rocf_post_args.parse_args()
@@ -340,7 +341,8 @@ api.add_resource(Prediction, "/prediction")
 api.add_resource(ROCFEvaluationsList, "/rocf")
 api.add_resource(ROCFEvaluation, "/rocf/<string:id>")
 api.add_resource(ROCFRevisions, "/revision")
-api.add_resource(ROCFFiles, "/files")
+# api.add_resource(ROCFFiles, "/files", methods = ['POST'])
+api.add_resource(ROCFFiles, "/files/<string:docID>/<string:filename>")
 
 
 env = os.environ.get('FLASK_ENV')
