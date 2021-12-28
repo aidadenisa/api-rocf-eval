@@ -6,7 +6,7 @@ from shapely.geometry import Polygon, Point, LineString
 from shapely.ops import unary_union
 
 
-from preprocessing.homography import unique_color, maxDeviationThresh
+from preprocessing.homography import maxDeviationThresh
 from prediction.image_processing import draw_contours
 
 #TODO: CANNOT BE EXTRACTED EASILY, IT HAS THE THRESH VALUE

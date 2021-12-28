@@ -28,7 +28,7 @@ def convertImageB64ToMatrix(imageb64):
     return matImage
 
 def convertImageFromMatrixToB64(imageMatrix): 
-    retval, buffer = cv2.imencode('.jpg', imageMatrix)
+    retval, buffer = cv2.imencode('.png', imageMatrix)
     imgb64 = base64.b64encode(buffer)
     return imgb64
 
@@ -64,12 +64,11 @@ def emphasiseColor(image, contrast=0.2, brightness=(-20)):
 
 def adjustImage(image, increaseBrightness=False, alpha=1.4, beta=30, gamma=1.0):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    gray[gray == 0] = 255
     
     new_image = gray
 
     # new_image = adjustGamma(new_image, gamma=gamma)
-    if gamma is not 1.0:
+    if gamma is not 1.0 and gamma is not None:
         new_image = adjustGamma(new_image, gamma=gamma)
 
     if increaseBrightness == True:
@@ -94,11 +93,11 @@ def adjustGamma(image, gamma=0.6):
     return new_image
 
 def sharpenDrawing(image, threshold=None):
-    image = cv2.bilateralFilter(image, 10, sigmaColor=15, sigmaSpace=15)
+    #removes some noise
+    image = cv2.bilateralFilter(image, 7, sigmaColor=8, sigmaSpace=8)
     # plt.imshow(dst, cmap='gray')
     # plt.show()
 
-    
     #initialize the drawing array as fully white 
     threshed = np.ones(image.shape, np.uint8) * 255
     if threshold is None:
@@ -224,10 +223,14 @@ def background_thumbnail(template, modality, thumbnail_size=(200,200)):
 
 def unique_color(img):
     mask = img>0
-    only_color = img[mask]
-    colors, count = np.unique(only_color, return_counts=True)
-    max_color = colors[count.argmax()]
+    max_color = getMostFrequentColor(img)
     # print(max_color)
     img[np.logical_not(mask)] = max_color
     return img
  
+def getMostFrequentColor(img):
+    mask = img>0
+    only_color = img[mask]
+    colors, count = np.unique(only_color, return_counts=True)
+    max_color = colors[count.argmax()]
+    return max_color

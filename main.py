@@ -12,11 +12,11 @@ import time
 r = redis.Redis()
 q = Queue(connection=r)
 
-from flask import Flask, request
+from flask import Flask, request, send_from_directory
 from flask_restful import Api, Resource, reqparse, abort, fields, marshal_with, inputs
 from flask_cors import CORS, cross_origin
 
-from preprocessing import homography
+from preprocessing import homography, thresholding
 from prediction import predict_complex_scores, predict_simple_scores, model_storage, utils
 from data import database
 from data.utils import fixJSON
@@ -31,24 +31,43 @@ db = mongoClient.db
 
 app.config['CORS_HEADERS'] = 'Content-Type'
 
+
+# TESTT stuff - For testing purposes, you can use this: 
+# predictionComplexScores = {
+#     "names": "Immagini-01",
+#     "scores": [305.1994, 19.02158, 69.96901, 144.1374, 40.056805, 11.410182, 24.091259],
+#     "distances": [41.23105625617661, 56.568542494923804, 10.0, 91.92388155425118, 53.85164807134504, 31.622776601683793, 36.05551275463989],
+#     "rect": [(334, 159, 54, 254), (782, 327, 87, 86), (607, 383, 230, 151), (792, 169, 268, 312), (399, 250, 123, 156), (350, 555, 150, 155), (482, 510, 308, 121)]
+# }
+# predictionTotalScores = [2, 1, 1, 0, 0, 3, 3, 1, 2, 1, 3, 1, 1, 3, 2, 3, 1, 1]
+
 preprocessing_post_args = reqparse.RequestParser()
 preprocessing_post_args.add_argument("imageb64", type=str, help="Image is missing", required=True)
 preprocessing_post_args.add_argument("points", type=list, location="json", help="Image is missing", required=False)
 preprocessing_post_args.add_argument("increaseBrightness", type=bool, help="Brightness is missing", required=False)
 preprocessing_post_args.add_argument("gamma", type=float, help="Gamma is missing", required=False)
 preprocessing_post_args.add_argument("threshold", type=int, help="Threshold is missing", required=False)
+preprocessing_post_args.add_argument("blockSize", type=int, help="BlockSize is missing", required=False)
+preprocessing_post_args.add_argument("constant", type=int, help="Constant is missing", required=False)
 
 prediction_post_args = reqparse.RequestParser()
 prediction_post_args.add_argument("patientCode", type=str, help="Patient code is missing", required=True)
 prediction_post_args.add_argument("points", type=list, location="json", help="Image is missing", required=True)
 prediction_post_args.add_argument("date", type=inputs.datetime_from_iso8601, help="Datetime is missing", required=True)
 prediction_post_args.add_argument("imageb64", type=str, help="Image is missing", required=True)
-prediction_post_args.add_argument("threshold", type=str, help="Threshold is missing", required=False)
+prediction_post_args.add_argument("threshold", type=int, help="Threshold is missing", required=False)
+prediction_post_args.add_argument("gamma", type=float, help="Gamma is missing", required=False)
+prediction_post_args.add_argument("medium", type=str, help="Medium is missing", required=True)
+prediction_post_args.add_argument("adaptiveThresholdC", type=int, help="Adaptive Threshold constant is missing", required=False)
+prediction_post_args.add_argument("adaptiveThresholdBS", type=int, help="Adaptive Threshold block size is missing", required=False)
 
 revision_post_args = reqparse.RequestParser()
 revision_post_args.add_argument("_rocfEvaluationId", type=str, help="Evaluation code is missing", required=True)
 revision_post_args.add_argument("revisedScores", type=list, location="json", help="Revised scores are missing", required=True)
 revision_post_args.add_argument("scores", type=list, location="json", help="Updated scores are missing", required=True)
+
+upload_rocf_post_args = reqparse.RequestParser()
+upload_rocf_post_args.add_argument("imageb64", type=str, help="Image is missing", required=True)
 
 revision_response = {
     "_id": fields.Raw(),
@@ -139,10 +158,30 @@ class Preprocessing(Resource):
     @cross_origin()
     @marshal_with(homography_fields)
     def post(self):
+        # GAMMA TRANSFORM
         args = preprocessing_post_args.parse_args()
         img = homography.convertImageB64ToMatrix(args['imageb64'])
 
-        # img = homography.emphasiseColor(img, 1.1, -50)
+        max_color = homography.getMostFrequentColor(img)
+        img = homography.removeScore(img, color=max_color)
+        img = homography.adjustImage(img, gamma=args["gamma"])
+
+        imgb64 = homography.convertImageFromMatrixToB64(img)
+        result = {}
+        result["image"] = imgb64
+        return result
+    @cross_origin()
+    @marshal_with(homography_fields)
+    def put(self):
+        # ADAPTIVE THRESHOLDING
+        args = preprocessing_post_args.parse_args()
+        img = homography.convertImageB64ToMatrix(args['imageb64'])
+        
+        img = cv2.bilateralFilter(img, 5, sigmaColor=8, sigmaSpace=8)
+        gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+        bw = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, args["blockSize"], args["constant"])
+        img = cv2.cvtColor(bw, cv2.COLOR_GRAY2RGB)
+
         imgb64 = homography.convertImageFromMatrixToB64(img)
         result = {}
         result["image"] = imgb64
@@ -155,30 +194,19 @@ class Prediction(Resource):
         args = prediction_post_args.parse_args()
         img = homography.convertImageB64ToMatrix(args['imageb64'])
 
-        # For testing purposes, you can use this: 
-        # predictionComplexScores = {
-        #     "names": "Immagini-01",
-        #     "scores": [305.1994, 19.02158, 69.96901, 144.1374, 40.056805, 11.410182, 24.091259],
-        #     "distances": [41.23105625617661, 56.568542494923804, 10.0, 91.92388155425118, 53.85164807134504, 31.622776601683793, 36.05551275463989],
-        #     "rect": [(334, 159, 54, 254), (782, 327, 87, 86), (607, 383, 230, 151), (792, 169, 268, 312), (399, 250, 123, 156), (350, 555, 150, 155), (482, 510, 308, 121)]
-        # }
-
         # PREPROCESSING
         threshold = 255
-        img = homography.adjustImage(img)
-        if args["threshold"] is None: 
-            threshold = homography.getThreshold(img)
-            img = homography.sharpenDrawing(img)
-        else:
-            threshold = args["threshold"]
-            img = homography.sharpenDrawing(img, threshold)
+        if args["medium"] == "scan":
+            img, threshold = thresholding.preprocessingScans(img, args["threshold"])
+        elif  args["medium"] == "photo":
+            img = thresholding.preprocessingPhoto(img, args["points"], gamma=args["gamma"], constant= args["adaptiveThresholdC"], blockSize= args["adaptiveThresholdBS"])
         
+        # PREDICTION
         predictionComplexScores = predict_complex_scores.predictComplexScores(img, args['points'])
         predictionTotalScores = predict_simple_scores.predictScores(img, args['points'], predictionComplexScores, threshold=threshold)
         scores = utils.generateScoresFromPrediction(predictionTotalScores)
 
-        # test = [2, 1, 1, 0, 0, 3, 3, 1, 2, 1, 3, 1, 1, 3, 2, 3, 1, 1]
-
+        # SAVE RESULT
         result = {}
         result["scores"] = scores
         result["patientCode"] = args["patientCode"]
@@ -186,7 +214,6 @@ class Prediction(Resource):
         result["points"] = args["points"]
 
         insertResult = db.rocf.insert_one(result)
-        # print(insertResult)
         result["_id"] = str(insertResult.inserted_id)
         return result
 
@@ -245,36 +272,37 @@ class ROCFRevisions(Resource):
         
         return fixJSON(result), 200
 
+# class ROCFFiles(Resource): 
+#     def get(self, filename):
+#         return send_from_directory(app.config['UPLOAD_PATH'], filename)
+#     def post(self):
+#         args = upload_rocf_post_args.parse_args()
+#         uploaded_file = args['imageb64']
+        
+#         filename = secure_filename(uploaded_file.filename)
+#         if filename != '':
+#             file_ext = os.path.splitext(filename)[1]
+#             if file_ext not in app.config['UPLOAD_EXTENSIONS'] or \
+#                     file_ext != validate_image(uploaded_file.stream):
+#                 abort(400)
+#             uploaded_file.save(os.path.join(app.config['UPLOAD_PATH'], filename))
+#         return redirect(url_for('index'))
+
+   
+
 def ROCFevaluate(args, DBobject):
     img = homography.convertImageB64ToMatrix(args['imageb64'])
     
-    
-    # TODO: TO FIX: PREPROCESSING
+    # PREPROCESSING
     threshold = 255
-    img = homography.adjustImage(img, gamma=0.7)
-    if args["threshold"] is None: 
-        threshold = homography.getThreshold(img)
-        img = homography.sharpenDrawing(img)
-    else:
-        threshold = args["threshold"]
-        img = homography.sharpenDrawing(img, threshold)
-
-
-
-    # For testing purposes, you can use this: 
-    # predictionComplexScores = {
-    #     "names": "Immagini-01",
-    #     "scores": [305.1994, 19.02158, 69.96901, 144.1374, 40.056805, 11.410182, 24.091259],
-    #     "distances": [41.23105625617661, 56.568542494923804, 10.0, 91.92388155425118, 53.85164807134504, 31.622776601683793, 36.05551275463989],
-    #     "rect": [(334, 159, 54, 254), (782, 327, 87, 86), (607, 383, 230, 151), (792, 169, 268, 312), (399, 250, 123, 156), (350, 555, 150, 155), (482, 510, 308, 121)]
-    # }
+    if args["medium"] == "scan":
+        img, threshold = thresholding.preprocessingScans(img, args["threshold"])
+    elif  args["medium"] == "photo":
+        img = thresholding.preprocessingPhoto(img, args["points"], gamma=args["gamma"], constant= args["adaptiveThresholdC"], blockSize= args["adaptiveThresholdBS"])
     
+    # PREDICTION
     predictionComplexScores = predict_complex_scores.predictComplexScores(img, args['points'])
     predictionTotalScores = predict_simple_scores.predictScores(img, args['points'], predictionComplexScores, threshold=threshold)
-
-    #TESTT
-    # predictionTotalScores = [2, 1, 1, 0, 0, 3, 3, 1, 2, 1, 3, 1, 1, 3, 2, 3, 1, 1]
-
     scores = utils.generateScoresFromPrediction(predictionTotalScores)
 
     insertResult = db.rocf.update_one(
@@ -284,7 +312,6 @@ def ROCFevaluate(args, DBobject):
             }
         }
     )
-
 
 # good
 api.add_resource(Preprocessing, "/preprocessing")
