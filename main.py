@@ -20,7 +20,7 @@ from werkzeug.utils import secure_filename
 
 from preprocessing import homography, thresholding
 from prediction import predict_complex_scores, predict_simple_scores, model_storage, utils
-from data import database
+from data import database, files
 from data.utils import fixJSON
 
 app = Flask(__name__)
@@ -238,6 +238,10 @@ class Prediction(Resource):
         insertResult = db.rocf.insert_one(result)
         result["_id"] = str(insertResult.inserted_id)
 
+        # HARDCODED DOCTOR ID UNTIL LOGIN
+        files.saveROCFImage(args["imageb64"], app.config['UPLOAD_PATH'], "xxxxxx3",
+            args["patientCode"], args["date"])
+
         job = q.enqueue(ROCFevaluate, args, insertResult)
 
         return result
@@ -285,29 +289,8 @@ class ROCFFiles(Resource):
 
     def post(self):
         args = upload_rocf_post_args.parse_args()
-        uploaded_file = args['imageb64']
-        date = args["date"].strftime("%d:%m:%Y-%H:%M:%S")
-        # filename = secure_filename(uploaded_file.filename)
-        filename = args["patientCode"] + "_" + date
-        doctorFolderPath = os.path.join(app.config['UPLOAD_PATH'], args["doctorID"])
-
-        if filename != '':
-            image = base64.b64decode(uploaded_file)
-            # file_ext = os.path.splitext(filename)[1]
-            # if file_ext not in app.config['UPLOAD_EXTENSIONS']:
-            #     abort(400)
-            
-            if not os.path.isdir(app.config['UPLOAD_PATH']):
-                os.mkdir(app.config['UPLOAD_PATH'])
-            
-            if not os.path.isdir(doctorFolderPath):
-                os.mkdir(os.path.join(doctorFolderPath))
-
-            location = os.path.join(doctorFolderPath, filename + ".png")
-            
-            with open(location, "wb") as fh:
-                fh.write(image)
-                        
+        files.saveROCFImage(args["imageb64"], app.config['UPLOAD_PATH'], args["doctorID"],
+            args["patientCode"], args["date"])
         return 200
 
    
@@ -341,8 +324,7 @@ api.add_resource(Prediction, "/prediction")
 api.add_resource(ROCFEvaluationsList, "/rocf")
 api.add_resource(ROCFEvaluation, "/rocf/<string:id>")
 api.add_resource(ROCFRevisions, "/revision")
-# api.add_resource(ROCFFiles, "/files", methods = ['POST'])
-api.add_resource(ROCFFiles, "/files/<string:docID>/<string:filename>")
+api.add_resource(ROCFFiles, "/files", "/files/<string:docID>/<string:filename>")
 
 
 env = os.environ.get('FLASK_ENV')
