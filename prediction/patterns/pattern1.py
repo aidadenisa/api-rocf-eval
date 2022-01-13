@@ -1,12 +1,14 @@
 import cv2
 import numpy as np
 import pandas as pd
+from shapely.geometry.base import CAP_STYLE
 from skimage.morphology import skeletonize
 from shapely.geometry import LineString, Point
 from shapely.ops import unary_union
 
 from prediction import image_processing as imgProcess
 from prediction.image_processing import thick_rect
+from prediction.patterns.pattern2 import buildROIs
 
 # Hough Line Transform - Probabilistically detect the presence of a line
 def best_line(backgrounds, idx, external, draw=False, drawing=None):
@@ -237,12 +239,24 @@ for external1, external1_rot_sx,  external1_rot_dx, external2, external2_rot_sx,
           (external2_rot_sx[3][0] - i * pad_move, external2_rot_sx[3][1])])
   j += 1
   
+def buildROIs(diagonals): 
+  rois = []
+  for diag in diagonals:
+    line = LineString([tuple(diag[0]),tuple(diag[1])])
+    buffer = line.buffer(30, cap_style=CAP_STYLE.square)
+    simplified = buffer.simplify(tolerance=0.95, preserve_topology=True)
+    coords = np.array(list(simplified.exterior.coords)).astype(int)
+    rois.append(coords.tolist())
+  
+  return np.array(rois)
+
 class Pattern1:
   def __init__(self, img, drawing):
     # photo, scan
     self.img = img   
     # generated drawing from the image 
     self.drawing = drawing
+    self.roi = []
   
   # TODO: EXPLAIN WHAT IT DOES; externals represents an array of ROIs of one of the diagonals (1st or 2nd)
   def get_score_externals(self, externals):
@@ -418,5 +432,9 @@ class Pattern1:
       label_diag_line = 1     
     # self.drawing = the generated drawing based on the image
     # label_diag_line = score; diag1_coord, diag2_coord = coords of the diagonals
+
+    self.roi = buildROIs([diag1_coord, diag2_coord])
     return self.drawing, label_diag_line, diag1_coord, diag2_coord
     
+  def get_ROI(self):
+    return self.roi

@@ -102,7 +102,8 @@ def find_line(image, points, predictionComplexScores, threshold):
     pat1 = pattern1.Pattern1(img, drawing)    
     # TODO: explain what is returned
     drawing, results[0], diag1, diag2 = pat1.get_score(ret_fig)
-
+    print(pat1.get_ROI())
+    
     pat6 = pattern6.Pattern6(img, drawing)
     drawing, results[5], oriz_coord = pat6.get_score(ret_fig, diag1, diag2)    
 
