@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import pandas as pd
 from skimage.morphology import skeletonize
-from shapely.geometry import Polygon, Point
+from shapely.geometry import Polygon, Point, LinearRing
 from scipy.spatial import distance
 
 from preprocessing import homography
@@ -28,6 +28,26 @@ external = [(p_dst[0][0]-pad_ext, diag_eq([p_dst[0], p_dst[2]], p_dst[0][0]-pad_
 internal = [(p_dst[0][0]+pad_int, diag_eq([p_dst[0], p_dst[2]],p_dst[0][0]+pad_int)), (p_dst[1][0]-pad_int, diag_eq([p_dst[1], p_dst[3]], p_dst[1][0]-pad_int)),
           (p_dst[2][0]-pad_int, diag_eq([p_dst[0], p_dst[2]], p_dst[2][0]-pad_int)), (p_dst[3][0]+pad_int, diag_eq([p_dst[1], p_dst[3]], p_dst[3][0]+pad_int))]
 
+def buildROIs(p_dst): 
+    pad_ext = 30
+    pad_int = 30
+
+    #building the external rectangle 
+    external = [
+        [p_dst[0][0]-pad_ext, diag_eq([p_dst[0], p_dst[2]], p_dst[0][0]-pad_ext)],
+        [p_dst[1][0]+pad_ext, diag_eq([p_dst[1], p_dst[3]], p_dst[1][0]+pad_ext)],
+        [p_dst[2][0]+pad_ext, diag_eq([p_dst[0], p_dst[2]], p_dst[2][0]+pad_ext)],
+        [p_dst[3][0]-pad_ext, diag_eq([p_dst[1], p_dst[3]],p_dst[3][0]-pad_ext)]
+    ]
+    #building the internal rectangle
+    internal = [
+        [p_dst[0][0]+pad_int, diag_eq([p_dst[0], p_dst[2]],p_dst[0][0]+pad_int)], 
+        [p_dst[1][0]-pad_int, diag_eq([p_dst[1], p_dst[3]], p_dst[1][0]-pad_int)],
+        [p_dst[2][0]-pad_int, diag_eq([p_dst[0], p_dst[2]], p_dst[2][0]-pad_int)], 
+        [p_dst[3][0]+pad_int, diag_eq([p_dst[1], p_dst[3]], p_dst[3][0]+pad_int)]
+    ]
+
+    return np.array([external, internal])
 
 ###FUNCTIONS
 
@@ -152,6 +172,7 @@ class Pattern2:
     self.img = img    
     # the 0-initialized drawing 3d structure
     self.drawing = drawing
+    self.roi = buildROIs(p_dst)
     # SVM model and scaler, pretrained, used for detecting the presence of the shape from the number of non-white pixels; this is used when the polygon was not detected
     self.model = model
     self.scaler = scaler
@@ -268,6 +289,9 @@ class Pattern2:
         ret_vertices = [Point(point).buffer(20) for point in rect_ext]
         # print('ret' , ret_vertices)
 
+        # update the roi
+        self.roi = buildROIs(rect_ext)
+           
         # if the circles created by the buffer around the points of the coordinates of each line are intersecting with the correct point from the next line
         if l1[1].intersects(l2[0]) and l2[1].intersects(l3[1]) and l4[1].intersects(l3[0]) and l4[0].intersects(l1[0]):
           # then offer the full score
@@ -287,6 +311,9 @@ class Pattern2:
         # shape is absent
         label_rect = 0
     return self.drawing, label_rect, None
+
+  def get_ROI(self):
+    return self.roi
 
 
 

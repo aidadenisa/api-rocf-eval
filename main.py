@@ -36,12 +36,12 @@ app.config['UPLOAD_EXTENSIONS'] = ['.jpg']
 app.config['UPLOAD_PATH'] = './uploads/rocfs'
 
 # TESTT stuff - For testing purposes, you can use this: 
-# predictionComplexScores = {
-#     "names": "Immagini-01",
-#     "scores": [305.1994, 19.02158, 69.96901, 144.1374, 40.056805, 11.410182, 24.091259],
-#     "distances": [41.23105625617661, 56.568542494923804, 10.0, 91.92388155425118, 53.85164807134504, 31.622776601683793, 36.05551275463989],
-#     "rect": [(334, 159, 54, 254), (782, 327, 87, 86), (607, 383, 230, 151), (792, 169, 268, 312), (399, 250, 123, 156), (350, 555, 150, 155), (482, 510, 308, 121)]
-# }
+predictionComplexScores = {
+    "names": "Immagini-01",
+    "scores": [305.1994, 19.02158, 69.96901, 144.1374, 40.056805, 11.410182, 24.091259],
+    "distances": [41.23105625617661, 56.568542494923804, 10.0, 91.92388155425118, 53.85164807134504, 31.622776601683793, 36.05551275463989],
+    "rect": [(334, 159, 54, 254), (782, 327, 87, 86), (607, 383, 230, 151), (792, 169, 268, 312), (399, 250, 123, 156), (350, 555, 150, 155), (482, 510, 308, 121)]
+}
 # predictionTotalScores = [2, 1, 1, 0, 0, 3, 3, 1, 2, 1, 3, 1, 1, 3, 2, 3, 1, 1]
 
 preprocessing_post_args = reqparse.RequestParser()
@@ -214,7 +214,7 @@ class Prediction(Resource):
             img = thresholding.preprocessingPhoto(img, args["points"], gamma=args["gamma"], constant= args["adaptiveThresholdC"], blockSize= args["adaptiveThresholdBS"])
         
         # PREDICTION
-        predictionComplexScores = predict_complex_scores.predictComplexScores(img, args['points'])
+        # predictionComplexScores = predict_complex_scores.predictComplexScores(img, args['points'])
         predictionTotalScores = predict_simple_scores.predictScores(img, args['points'], predictionComplexScores, threshold=threshold)
         scores = utils.generateScoresFromPrediction(predictionTotalScores)
 

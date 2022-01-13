@@ -95,6 +95,7 @@ def find_line(image, points, predictionComplexScores, threshold):
     # return the figure as a tuple: first is the polygon shape, and the second is the corners (vertices)
     drawing, results[1], ret_fig = pat2.get_score()
     # print(ret_fig)
+    print(pat2.get_ROI())
    
     #Generate score for pattern 1 [ANALYTICAL] [COMPUTER VISION]
     # img - initial image; drawing - generated drawing after the initia image

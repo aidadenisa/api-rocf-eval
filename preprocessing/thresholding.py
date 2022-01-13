@@ -25,9 +25,8 @@ def preprocessingPhoto(img, points, gamma=None, constant=None, blockSize=None):
     return bw
 
 def preprocessingScans(img, threshold=None):
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     if threshold is None: 
-        threshold = homography.getThreshold(img)
-        img = homography.sharpenDrawing(img)
-    else:
-        img = homography.sharpenDrawing(img, threshold)
+        threshold = homography.getThreshold(gray)
+    img = homography.sharpenDrawing(gray, threshold)
     return img, threshold
