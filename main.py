@@ -75,6 +75,12 @@ upload_rocf_post_args.add_argument("patientCode", type=str, help="Patient code i
 upload_rocf_post_args.add_argument("doctorID", type=str, help="Doctor id is missing", required=True)
 upload_rocf_post_args.add_argument("date", type=inputs.datetime_from_iso8601, help="Datetime is missing", required=True)
 
+thresholded_homographies_post_args = reqparse.RequestParser()
+thresholded_homographies_post_args.add_argument("sourceFolderURL", type=str, help="Source folder URL is missing", required=True)
+thresholded_homographies_post_args.add_argument("destinationFolderURL", type=str, help="Destination folder URL is missing", required=True)
+thresholded_homographies_post_args.add_argument("type", type=str, help="Type is missing", required=False)
+
+
 revision_response = {
     "_id": fields.Raw(),
     "_rocfEvaluationId": fields.Raw(),
@@ -293,6 +299,13 @@ class ROCFFiles(Resource):
             args["patientCode"], args["date"])
         return 200
 
+class ThresholdedHomographies(Resource): 
+    def post(self):
+        args = thresholded_homographies_post_args.parse_args()
+        # for now, the dataset and the points can be found on the same server, in the sourcefolder
+        # TODO: allow this to happen from the DB as well
+        files.generateThresholdedHomographies(args["sourceFolderURL"], args["destinationFolderURL"], type=args["type"])
+        return 200
    
 
 def ROCFevaluate(args, DBobject):
@@ -325,6 +338,7 @@ api.add_resource(ROCFEvaluationsList, "/rocf")
 api.add_resource(ROCFEvaluation, "/rocf/<string:id>")
 api.add_resource(ROCFRevisions, "/revision")
 api.add_resource(ROCFFiles, "/files", "/files/<string:docID>/<string:filename>")
+api.add_resource(ThresholdedHomographies, "/thresholding")
 
 
 env = os.environ.get('FLASK_ENV')
