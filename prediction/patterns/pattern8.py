@@ -4,6 +4,7 @@ import pandas as pd
 from skimage.morphology import skeletonize
 from shapely.geometry import Polygon, Point, LineString
 from shapely.ops import unary_union
+from shapely.geometry.base import CAP_STYLE
 
 from preprocessing.homography import maxDeviationThresh
 from prediction.image_processing import draw_contours
@@ -130,10 +131,23 @@ dist = int((852 - 382) / 2)
 def diag_eq(diag, y):
     return int(diag[0][0] + ((diag[1][0]-diag[0][0])/(diag[1][1]-diag[0][1]))*(y-diag[0][1]))
 
+def buildROIs(lines): 
+  rois = []
+  points = np.array(lines).reshape(-1, 2)
+  roi = Polygon([tuple(p) for p in points]).convex_hull
+  buffer = roi.buffer(30, cap_style=CAP_STYLE.square)
+  simplified = buffer.simplify(tolerance=0.95, preserve_topology=True)
+  coords = np.array(list(simplified.exterior.coords)).astype(int)
+  rois.append(coords.tolist())
+  
+  return rois
+
 class Pattern8:
   def __init__(self, img, drawing, diag1, diag2, vert, oriz):
     self.img = img    
     self.drawing = drawing
+    self.roi = []
+
     if diag1 is None:
       diagonale = [(382, 219), (852, 537)]
     else:
@@ -233,7 +247,8 @@ class Pattern8:
   def get_score(self, threshold):
     lines_found = self.count_line(self.externals, threshold=threshold)
 
-    if lines_found.shape[0] > 0:    
+    if lines_found.shape[0] > 0:   
+      self.roi = buildROIs(lines_found)
       for l in lines_found:
         self.drawing = cv2.line(self.drawing, tuple(l[0]), tuple(l[1]), (0,0,255), 2)
         for p in l:
@@ -258,3 +273,6 @@ class Pattern8:
       print('PATTERN8: nessuna linea trovata')
       label_l = 0
     return self.drawing, label_l
+
+  def get_ROI(self):
+    return self.roi

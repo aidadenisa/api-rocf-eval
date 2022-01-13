@@ -5,6 +5,7 @@ from skimage.morphology import skeletonize
 from shapely.geometry import Polygon
 from shapely.geometry import Polygon, Point
 from shapely.ops import unary_union
+from shapely.geometry.base import CAP_STYLE
 
 from prediction.image_processing import getBackground, draw_contours
 
@@ -13,16 +14,27 @@ v_dist = 150
 dist = int((852 - 382) / 2)
 line = [(852 - dist - 100, 219), (852, 219)]
 
+def buildROIs(triangle):
+  rois = []
+
+  roi = Polygon([tuple(p) for p in triangle])
+  buffer = roi.buffer(30, cap_style=CAP_STYLE.square)
+  simplified = buffer.simplify(tolerance=0.95, preserve_topology=True)
+  coords = np.array(list(simplified.exterior.coords)).astype(int)
+  rois.append(coords.tolist())
+
+  return rois
 
 class Pattern9:
   def __init__(self, img, drawing, vert):
     self.img = img    
-    self.drawing = drawing    
+    self.drawing = drawing  
+    self.roi = []  
     if vert is None:
-        self.external = [(line[0][0] - h_dist, line[0][1]+10), (line[0][0] - h_dist, line[0][1]-v_dist),
-               (line[1][0] + h_dist, line[1][1]-v_dist), (line[1][0] + h_dist, line[1][1]+10)]
+      self.external = [(line[0][0] - h_dist, line[0][1]+10), (line[0][0] - h_dist, line[0][1]-v_dist),
+            (line[1][0] + h_dist, line[1][1]-v_dist), (line[1][0] + h_dist, line[1][1]+10)]
     else:
-        self.external = [(vert[1][0] - h_dist, vert[1][1] + 20), (vert[1][0] - h_dist, vert[1][1] - v_dist),
+      self.external = [(vert[1][0] - h_dist, vert[1][1] + 20), (vert[1][0] - h_dist, vert[1][1] - v_dist),
                          (line[1][0] + h_dist, line[1][1] - v_dist), (line[1][0] + h_dist, line[1][1] + 20)]
 
   def tree(self, hier, selected):
@@ -62,7 +74,7 @@ class Pattern9:
         (x, y), (width, height), angle = rect               
         # print('orientation = {}'.format(angle))
         self.drawing = cv2.polylines(self.drawing, [approx], True, (0, 191, 255), 2)
-           
+
     if rhomb is not None:
         tri_points = []
         incl1 = np.abs(np.rad2deg(np.arctan2(rhomb[1][1] - rhomb[0][1], rhomb[1][0] - rhomb[0][0])))
@@ -88,6 +100,7 @@ class Pattern9:
         else:
             print('PATTERN9: forma distorta')
             label_rhomb = 1 
+        self.roi = buildROIs(rhomb)
     elif len(wrong_shapes) > 0:
           found = False
           for c in wrong_shapes:
@@ -97,6 +110,7 @@ class Pattern9:
             uguali = np.all(hull in approx)
             if len(approx) > 2 and uguali:
                 self.drawing = cv2.polylines(self.drawing, [approx], True, (0, 191, 255), 1)
+                self.roi = buildROIs(np.array(approx).reshape(-1, 2))
                 found = True
           if found:
             print('PATTERN9: forma sbagliata')
@@ -108,3 +122,6 @@ class Pattern9:
         print('PATTERN9: forma assente')
         label_rhomb = 0
     return self.drawing, label_rhomb
+  
+  def get_ROI(self):
+    return self.roi

@@ -47,7 +47,7 @@ def buildROIs(p_dst):
         [p_dst[3][0]+pad_int, diag_eq([p_dst[1], p_dst[3]], p_dst[3][0]+pad_int)]
     ]
 
-    return np.array([external, internal])
+    return [external, internal]
 
 ###FUNCTIONS
 

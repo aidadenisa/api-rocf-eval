@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 from skimage.morphology import skeletonize
 from shapely.geometry import Polygon, Point, LineString
+from shapely.geometry.base import CAP_STYLE
 
 from prediction.image_processing import getBackground, draw_contours
 
@@ -98,15 +99,26 @@ for i in range(5):
   externals.append([(external1[0][0] + i * pad_move + pad_move_d, external1[0][1]), (external1[1][0] + i * pad_move + pad_move_d, external1[1][1]),
         (external1[2][0] + i * pad_move - pad_move_d, external1[2][1]), (external1[3][0] + i * pad_move - pad_move_d, external1[3][1])])
   
+def buildROIs(line): 
+  rois = []
+  lineObj = LineString(line)
+  buffer = lineObj.buffer(30, cap_style=CAP_STYLE.square)
+  # simplified = buffer.simplify(tolerance=0.95, preserve_topology=True)
+  coords = np.array(list(buffer.exterior.coords)).astype(int)
+  rois.append(coords.tolist())
+  
+  return rois
 class Pattern7:
   def __init__(self, img, drawing):
     self.img = img    
     self.drawing = drawing
+    self.roi = []
     
   def get_score(self, rect, diag1, diag2):
     backgrounds = []
     cnts = []
     rect_or = None
+
     for external in externals:
       background, cnt = getBackground(external, self.img)
       backgrounds.append(background)
@@ -131,6 +143,7 @@ class Pattern7:
       p1 = None
       p2 = None
       p3 = None
+      self.roi = buildROIs(rect_or)
       self.drawing = cv2.circle(self.drawing, tuple(rect_or[0]), 15, (255, 0, 0), 2)
       self.drawing = cv2.circle(self.drawing, tuple(rect_or[1]), 15, (255, 0, 0), 2)     
       lines_points_or = [Point(tuple(rect_or[0])).buffer(15), Point(tuple(rect_or[1])).buffer(15)]
@@ -165,3 +178,7 @@ class Pattern7:
     else:     
       label_or_line = 0
     return self.drawing, label_or_line, rect_or  
+  
+  def get_ROI(self):
+    return self.roi
+

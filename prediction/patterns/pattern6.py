@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 from skimage.morphology import skeletonize
 from shapely.geometry import Polygon, Point, LineString
+from shapely.geometry.base import CAP_STYLE
+
 
 from preprocessing import homography
 from prediction import image_processing as imgProcess
@@ -70,6 +72,15 @@ def best_line(backgrounds, idx, only_length, h=True, draw=False, drawing=None):
                 return (max_left, lefty), (max_right, righty), drawing
         return None
 
+def buildROIs(line): 
+  rois = []
+  lineObj = LineString(line)
+  buffer = lineObj.buffer(30, cap_style=CAP_STYLE.square)
+  # simplified = buffer.simplify(tolerance=0.95, preserve_topology=True)
+  coords = np.array(list(buffer.exterior.coords)).astype(int)
+  rois.append(coords.tolist())
+  
+  return rois
 
 pad_v = 15
 pad_h = 20
@@ -100,7 +111,7 @@ class Pattern6:
   def __init__(self, img, drawing):
     self.img = img    
     self.drawing = drawing
-    
+    self.roi = []
 
   def get_score(self, rect, diag1, diag2):
     backgrounds = []
@@ -127,6 +138,7 @@ class Pattern6:
         #print('best inclination: {}'.format(np.abs(np.rad2deg(np.arctan2(righty - lefty, max_right - max_left)))))
         rect_or = np.array([[max_right, righty], [max_left, lefty]])
     if rect_or is not None:
+      self.roi = buildROIs(rect_or)
       p1 = None
       p2 = None
       p3 = None
@@ -166,3 +178,6 @@ class Pattern6:
     else:     
       label_or_line = 0
     return self.drawing, label_or_line, None
+  
+  def get_ROI(self):
+    return self.roi

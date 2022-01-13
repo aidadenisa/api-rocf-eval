@@ -5,6 +5,7 @@ from skimage.morphology import skeletonize
 from shapely.geometry import Polygon
 from shapely.geometry import Polygon, Point, LineString
 from shapely.ops import unary_union
+from shapely.geometry.base import CAP_STYLE
 
 from preprocessing.homography import sharpenDrawing
 from prediction.image_processing import draw_contours
@@ -45,10 +46,22 @@ def getBackground(external, img, morph=True, ret_hier=False):
 h_dist = 25  # distanza diviso 2
 v_dist = 132
 
+def buildROIs(triangle):
+  rois = []
+
+  roi = Polygon([tuple(p) for p in triangle])
+  buffer = roi.buffer(30, cap_style=CAP_STYLE.square)
+  simplified = buffer.simplify(tolerance=0.95, preserve_topology=True)
+  coords = np.array(list(simplified.exterior.coords)).astype(int)
+  rois.append(coords.tolist())
+
+  return rois
+
 class Pattern14:
   def __init__(self, img, drawing, r_points):
     self.img = img    
     self.drawing = drawing
+    self.roi = []
     p_dst_r = [(r_points[0] - h_dist, r_points[1]), (r_points[0] + h_dist, r_points[1]),
                (r_points[0] + h_dist, r_points[1] + v_dist), (r_points[0] - h_dist, r_points[1] + v_dist)]
     pad = 50
@@ -95,6 +108,7 @@ class Pattern14:
         for vert in approx:
             self.drawing = cv2.circle(self.drawing, tuple(vert[0]), 5, (0, 0, 255), -1)
     if rhomb is not None:
+        self.roi = buildROIs(rhomb)
         rhomb_points = []
         sort = np.argsort(rhomb[:, 1])
         for p in sort:
@@ -120,9 +134,13 @@ class Pattern14:
           for c in wrong_shapes:
             peri = cv2.arcLength(cnts_r[c], True)
             approx = cv2.approxPolyDP(cnts_r[c], 0.05 * peri, True)
+            self.roi = buildROIs(np.array(approx).reshape(-1, 2))
             self.drawing = cv2.polylines(self.drawing, [approx], True, (0, 191, 255), 1)
           label_rhomb = 1
     else:
         print('PATTERN14: forma assente')
         label_rhomb = 0
     return self.drawing, label_rhomb, None
+
+  def get_ROI(self):
+    return self.roi

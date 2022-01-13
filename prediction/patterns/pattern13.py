@@ -4,7 +4,7 @@ import pandas as pd
 from skimage.morphology import skeletonize
 from shapely.geometry import Polygon, Point, LineString
 from shapely.ops import unary_union
-
+from shapely.geometry.base import CAP_STYLE
 
 from preprocessing.homography import maxDeviationThresh
 from prediction.image_processing import draw_contours
@@ -117,10 +117,21 @@ pad_move_d = 10
 def diag_eq(diag, x):
     return int(diag[0][1] + ((diag[1][1]-diag[0][1])/(diag[1][0]-diag[0][0]))*(x-diag[0][0]))
  
+def buildROIs(line): 
+  rois = []
+  lineObj = LineString(line)
+  buffer = lineObj.buffer(30, cap_style=CAP_STYLE.square)
+  # simplified = buffer.simplify(tolerance=0.95, preserve_topology=True)
+  coords = np.array(list(buffer.exterior.coords)).astype(int)
+  rois.append(coords.tolist())
+  
+  return rois
+
 class Pattern13:
   def __init__(self, img, drawing, r_points, rect):
     self.img = img    
     self.drawing = drawing
+    self.roi = []
     if rect is None:
         line1 = [(852, 219), r_points]
         line2 = [(852, 537), r_points]
@@ -182,6 +193,7 @@ class Pattern13:
         rect_or = np.array([[lefty, max_left], [righty, max_right]])  
 
     if rect_or is not None:
+      self.roi = buildROIs(rect_or)
       self.drawing = cv2.circle(self.drawing, tuple(rect_or[0]), 15, (255, 0, 0), 2)
       self.drawing = cv2.circle(self.drawing, tuple(rect_or[1]), 15, (255, 0, 0), 2)
       if lines_found.shape[0] == 1:
@@ -212,3 +224,6 @@ class Pattern13:
       print('PATTERN13: nessuna linea trovata')     
       label_or_line = 0
     return self.drawing, label_or_line  
+
+  def get_ROI(self):
+    return self.roi

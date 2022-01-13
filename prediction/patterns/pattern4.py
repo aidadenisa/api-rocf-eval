@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 from skimage.morphology import skeletonize
 from shapely.geometry import Polygon, Point, LineString
+from shapely.geometry.base import CAP_STYLE
 
 from preprocessing.homography import maxDeviationThresh
 from prediction.image_processing import draw_contours
@@ -117,10 +118,20 @@ pad_move_d = 5
 def diag_eq(diag, y):
   return int(diag[0][0] + ((diag[1][0]-diag[0][0])/(diag[1][1]-diag[0][1]))*(y-diag[0][1]))
 
+def buildROIs(line): 
+  rois = []
+  lineObj = LineString(line)
+  buffer = lineObj.buffer(30, cap_style=CAP_STYLE.square)
+  # simplified = buffer.simplify(tolerance=0.95, preserve_topology=True)
+  coords = np.array(list(buffer.exterior.coords)).astype(int)
+  rois.append(coords.tolist())
+  
+  return rois
 class Pattern4:
   def __init__(self, img, drawing, diag1, oriz):
     self.img = img    
     self.drawing = drawing
+    self.roi = []
     if diag1 is not None:
       diagonale = diag1
     else:
@@ -192,6 +203,8 @@ class Pattern4:
         self.drawing = cv2.circle(self.drawing, tuple(rect_or[1]), 20, (255, 0, 0), 2)
         lines_points_or = [Point(tuple(rect_or[0])).buffer(15), Point(tuple(rect_or[1])).buffer(20)]
         line_or = LineString(rect_or).buffer(1.5)
+
+        self.roi = buildROIs(rect_or)
         if diag1 is not None:
           d1 = LineString(diag1).buffer(1.5)
           p1_1 = lines_points_or[1].intersects(d1)
@@ -211,4 +224,8 @@ class Pattern4:
     else:
       print('PATTERN4: nessuna linea trovata')      
       label_or_line = 0
+    
     return self.drawing, label_or_line
+  
+  def get_ROI(self):
+    return self.roi

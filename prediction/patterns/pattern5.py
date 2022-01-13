@@ -180,12 +180,13 @@ class Pattern5:
     self.m = m
     self.s = s
     self.predictionComplexScores = predictionComplexScores
+    self.roi = []
   
   def get_score(self, threshold=None):
     coords = [324,119,378,373]
     
     if self.predictionComplexScores:
-        rail_bbox = self.predictionComplexScores['rect'][4]
+        rail_bbox = self.predictionComplexScores['rect'][0]
         external = [(rail_bbox[0], rail_bbox[1]), (rail_bbox[0] + rail_bbox[2], rail_bbox[1]),(rail_bbox[0] + rail_bbox[2], rail_bbox[1] + rail_bbox[3]),
                     (rail_bbox[0], rail_bbox[1] + rail_bbox[3])]
         background_rail, _ = getBackground(external, self.img, threshold=threshold)
@@ -228,4 +229,8 @@ class Pattern5:
             label_rail = 1
         else:
             label_rail = 0
+    self.roi = [[[p[0], p[1]] for p in external]]
     return self.drawing, label_rail
+
+  def get_ROI(self):
+    return self.roi

@@ -55,6 +55,7 @@ class Pattern17:
     self.m = m
     self.s = s
     self.predictionComplexScores = predictionComplexScores
+    self.roi = []
   
   def get_score(self):
     coords = [502, 540, 810, 661]
@@ -92,4 +93,8 @@ class Pattern17:
         label_rail = 1
       else:
         label_rail = 0
+    self.roi = [[[p[0], p[1]] for p in external]]
     return self.drawing, label_rail
+
+  def get_ROI(self):
+    return self.roi

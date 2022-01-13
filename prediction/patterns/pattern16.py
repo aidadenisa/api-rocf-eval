@@ -4,6 +4,7 @@ import pandas as pd
 from skimage.morphology import skeletonize
 from shapely.geometry import Polygon, Point, LineString
 from shapely.ops import unary_union
+from shapely.geometry.base import CAP_STYLE
 
 from preprocessing.homography import sharpenDrawing
 from prediction.image_processing import draw_contours
@@ -95,10 +96,21 @@ dist = int((537 - 219) / 2)
 def diag_eq(diag, y):
   return int(diag[0][0] + ((diag[1][0]-diag[0][0])/(diag[1][1]-diag[0][1]))*(y-diag[0][1]))  
 
+def buildROIs(line): 
+  rois = []
+  lineObj = LineString(line)
+  buffer = lineObj.buffer(30, cap_style=CAP_STYLE.square)
+  # simplified = buffer.simplify(tolerance=0.95, preserve_topology=True)
+  coords = np.array(list(buffer.exterior.coords)).astype(int)
+  rois.append(coords.tolist())
+  
+  return rois
+
 class Pattern16:
   def __init__(self, img, drawing, r_points):
     self.img = img    
     self.drawing = drawing    
+    self.roi = []
     line = [(849, 537 - dist), (r_points[0], 537 - dist)]
     external1 = [(line[0][0] - pad_h, line[0][1] - pad_v), (line[1][0] + pad_h, line[1][1] - pad_v),
                      (line[1][0] + pad_h, line[1][1] + pad_v), (line[0][0] - pad_h, line[0][1] + pad_v)]
@@ -144,6 +156,7 @@ class Pattern16:
         #print('best inclination: {}'.format(np.abs(np.rad2deg(np.arctan2(righty - lefty, max_right - max_left)))))
         rect_h = np.array([[max_right, righty], [max_left, lefty]])         
     if rect_h is not None:
+      self.roi = buildROIs(rect_h)
       self.drawing = cv2.circle(self.drawing, tuple(rect_h[0]), 15, (255, 0, 0), 2)
       self.drawing = cv2.circle(self.drawing, tuple(rect_h[1]), 15, (255, 0, 0), 2)
       lines_points_h = [Point(tuple(rect_h[0])).buffer(15), Point(tuple(rect_h[1])).buffer(15)]
@@ -173,3 +186,6 @@ class Pattern16:
     else:
       label_h_line = 0
     return self.drawing, label_h_line  
+
+  def get_ROI(self):
+    return self.roi

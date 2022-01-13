@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 from skimage.morphology import skeletonize
 from shapely.geometry import Polygon, Point, LineString
+from shapely.geometry.base import CAP_STYLE
 
 from prediction.image_processing import getBackground, draw_contours
 
@@ -79,10 +80,20 @@ pad_move_d = 10
 def diag_eq(diag, x):
     return int(diag[0][1] + ((diag[1][1]-diag[0][1])/(diag[1][0]-diag[0][0]))*(x-diag[0][0]))
   
+def buildROIs(line): 
+  rois = []
+  lineObj = LineString(line)
+  buffer = lineObj.buffer(30, cap_style=CAP_STYLE.square)
+  # simplified = buffer.simplify(tolerance=0.95, preserve_topology=True)
+  coords = np.array(list(buffer.exterior.coords)).astype(int)
+  rois.append(coords.tolist())
+  
+  return rois
 class Pattern11:
   def __init__(self, img, drawing, vert, diag):
     self.img = img    
     self.drawing = drawing
+    self.roi = []
     if vert is not None:
       vert_limit = max(vert[:, 0]) + 25
     else:
@@ -143,6 +154,7 @@ class Pattern11:
         #print('best inclination: {}'.format(np.abs(np.rad2deg(np.arctan2(righty - lefty, max_right - max_left)))))
         rect_or = np.array([[lefty, max_left], [righty, max_right]])  
     if rect_or is not None:
+      self.roi = buildROIs(rect_or)
       self.drawing = cv2.circle(self.drawing, tuple(rect_or[0]), 15, (255, 0, 0), 2)
       self.drawing = cv2.circle(self.drawing, tuple(rect_or[1]), 15, (255, 0, 0), 2)
       if lines_found.shape[0] == 1:
@@ -183,3 +195,6 @@ class Pattern11:
       print('PATTERN11: nessuna linea trovata')      
       label_or_line = 0
     return self.drawing, label_or_line  
+
+  def get_ROI(self):
+    return self.roi

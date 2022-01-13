@@ -248,7 +248,7 @@ def buildROIs(diagonals):
     coords = np.array(list(simplified.exterior.coords)).astype(int)
     rois.append(coords.tolist())
   
-  return np.array(rois)
+  return rois
 
 class Pattern1:
   def __init__(self, img, drawing):

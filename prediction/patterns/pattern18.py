@@ -54,6 +54,7 @@ class Pattern18:
     self.m = m
     self.s = s
     self.predictionComplexScores = predictionComplexScores
+    self.roi = []
 
   def get_score(self):
     coords = [852, 229, 1031, 531]
@@ -91,5 +92,9 @@ class Pattern18:
         label_rail = 1
       else:
         label_rail = 0
+    self.roi = [[[p[0], p[1]] for p in external]]
     return self.drawing, label_rail
+
+  def get_ROI(self):
+    return self.roi
   
