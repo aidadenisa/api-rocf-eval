@@ -38,6 +38,8 @@ class DateTimeEncoder(json.JSONEncoder):
       return o.isoformat()
     if isinstance(o, bson.ObjectId):
       return str(o)
-    if isinstance(o, np.uint8):
+    if isinstance(o, np.uint8) or isinstance(o, np.int64):
       return int(o)
+    if isinstance(o, np.ndarray):
+      return o.tolist()
     return json.JSONEncoder.default(self, o)

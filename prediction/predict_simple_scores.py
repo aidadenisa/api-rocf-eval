@@ -86,72 +86,89 @@ def find_line(image, points, predictionComplexScores, threshold):
     #initialize the drawing as an array of 0s, in the shape of the image + 3 
     drawing = np.zeros((img.shape[0], img.shape[1], 3))
     #initialize the score result with 0s
-    results = np.zeros(18)
+    results =  [{ "label": 0, "roi": []} for i in range(18)]
+
 
     # [STUDIED] Generate score for pattern 2 (mostly computer vision, + SVM prediction)
     pat2 = pattern2.Pattern2(img, drawing, retrieveModel('rectangle_model.joblib'), retrieveModel('rectangle_scaler.joblib'))
     # get the drawing that contains the idenitfied lines and the polygon, with the circles drawn in its corners
     # get the resulted score
     # return the figure as a tuple: first is the polygon shape, and the second is the corners (vertices)
-    drawing, results[1], ret_fig = pat2.get_score()
+    drawing, results[1]['label'], ret_fig = pat2.get_score()
     # print(ret_fig)
-    print(pat2.get_ROI())
+    results[1]['roi'] = pat2.get_ROI()
+
    
     #Generate score for pattern 1 [ANALYTICAL] [COMPUTER VISION]
     # img - initial image; drawing - generated drawing after the initia image
     pat1 = pattern1.Pattern1(img, drawing)    
     # TODO: explain what is returned
-    drawing, results[0], diag1, diag2 = pat1.get_score(ret_fig)
-    print(pat1.get_ROI())
+    drawing, results[0]['label'], diag1, diag2 = pat1.get_score(ret_fig)
+    results[0]['roi'] = pat1.get_ROI()
     
     pat6 = pattern6.Pattern6(img, drawing)
-    drawing, results[5], oriz_coord = pat6.get_score(ret_fig, diag1, diag2)    
+    drawing, results[5]['label'], oriz_coord = pat6.get_score(ret_fig, diag1, diag2)    
+    results[5]['roi'] = pat6.get_ROI()
 
     pat3 = pattern3.Pattern3(img, drawing, retrieveModel('rett_diag_model.joblib'),  retrieveModel('rett_diag_scaler.joblib'), retrieveModel('rett_diag_score_model.joblib'), retrieveModel('rett_diag_score_scaler.joblib'), predictionComplexScores)
-    drawing, results[2] = pat3.get_score(ret_fig, diag1, diag2, oriz_coord, threshold)   
+    drawing, results[2]['label'] = pat3.get_score(ret_fig, diag1, diag2, oriz_coord, threshold)
+    results[2]['roi'] = pat3.get_ROI()   
     
     pat5 = pattern5.Pattern5(img, drawing, retrieveModel('cross_model.joblib'), retrieveModel('cross_scaler.joblib'), retrieveModel('cross_score_model.joblib'), retrieveModel('cross_score_scaler.joblib'), predictionComplexScores)
-    drawing, results[4] = pat5.get_score(threshold)   
+    drawing, results[4]['label'] = pat5.get_score(threshold)   
+    results[4]['roi'] = pat5.get_ROI()
     
     pat4 = pattern4.Pattern4(img, drawing, diag1, oriz_coord)
-    drawing, results[3] = pat4.get_score(diag1, ret_fig, threshold) 
+    drawing, results[3]['label'] = pat4.get_score(diag1, ret_fig, threshold)
+    results[3]['roi'] = pat4.get_ROI() 
     
     pat7 = pattern7.Pattern7(img, drawing)
-    drawing, results[6], vert = pat7.get_score(ret_fig, diag1, diag2)
+    drawing, results[6]['label'], vert = pat7.get_score(ret_fig, diag1, diag2)
+    results[6]['roi'] = pat7.get_ROI()
     
     pat8 = pattern8.Pattern8(img, drawing, diag1, diag2, vert, oriz_coord)
-    drawing, results[7] = pat8.get_score(threshold) 
+    drawing, results[7]['label'] = pat8.get_score(threshold) 
+    results[7]['roi'] = pat8.get_ROI()
     
     pat9 = pattern9.Pattern9(img, drawing, vert)
-    drawing, results[8] = pat9.get_score(ret_fig, vert)
-
+    drawing, results[8]['label'] = pat9.get_score(ret_fig, vert)
+    results[8]['roi'] = pat9.get_ROI()
     
     pat10 = pattern10.Pattern10(img, drawing, retrieveModel('face_model.joblib'), retrieveModel('face_scaler.joblib'), retrieveModel('face_score_model.joblib'), retrieveModel('face_score_scaler.joblib'), predictionComplexScores)
-    drawing, results[9] = pat10.get_score(diag2, oriz_coord)
+    drawing, results[9]['label'] = pat10.get_score(diag2, oriz_coord)
+    results[9]['roi'] = pat10.get_ROI()
     
     pat11 = pattern11.Pattern11(img, drawing, vert, diag2)
-    drawing, results[10] = pat11.get_score(ret_fig, diag1, diag2)  
+    drawing, results[10]['label'] = pat11.get_score(ret_fig, diag1, diag2) 
+    results[10]['roi'] = pat11.get_ROI() 
      
     pat12 = pattern12.Pattern12(img, drawing, retrieveModel('rail_model.joblib'), retrieveModel('rail_scaler.joblib'), retrieveModel('rail_score_model.joblib'), retrieveModel('rail_score_scaler.joblib'), predictionComplexScores)
-    drawing, results[11] = pat12.get_score()
+    drawing, results[11]['label'] = pat12.get_score()
+    results[11]['roi'] = pat12.get_ROI() 
     
     pat13 = pattern13.Pattern13(img, drawing, r_points, ret_fig)
-    drawing, results[12] = pat13.get_score(threshold) 
+    drawing, results[12]['label'] = pat13.get_score(threshold) 
+    results[12]['roi'] = pat13.get_ROI() 
        
     pat14 = pattern14.Pattern14(img, drawing, r_points)
-    drawing, results[13], rhomb_fig = pat14.get_score(r_points, diag1, diag2)
+    drawing, results[13]['label'], rhomb_fig = pat14.get_score(r_points, diag1, diag2)
+    results[13]['roi'] = pat14.get_ROI() 
        
     pat15 = pattern15.Pattern15(img, drawing, retrieveModel('rect_model.joblib'), retrieveModel('rect_scaler.joblib'), retrieveModel('rect_score_model.joblib'), retrieveModel('rect_score_scaler.joblib'), predictionComplexScores)
-    drawing, results[14] = pat15.get_score(ret_fig)
+    drawing, results[14]['label'] = pat15.get_score(ret_fig)
+    results[14]['roi'] = pat15.get_ROI() 
     
     pat16 = pattern16.Pattern16(img, drawing, r_points)
-    drawing, results[15] = pat16.get_score(ret_fig, oriz_coord, r_points)
+    drawing, results[15]['label'] = pat16.get_score(ret_fig, oriz_coord, r_points)
+    results[15]['roi'] = pat16.get_ROI() 
 
     pat17 = pattern17.Pattern17(img, drawing, retrieveModel('cross_vert_model.joblib'), retrieveModel('cross_vert_scaler.joblib'), retrieveModel('cross_vert_score_model.joblib'), retrieveModel('cross_vert_score_scaler.joblib'), predictionComplexScores)
-    drawing, results[16] = pat17.get_score()
+    drawing, results[16]['label'] = pat17.get_score()
+    results[16]['roi'] = pat17.get_ROI() 
 
     pat18 = pattern18.Pattern18(img, drawing, retrieveModel('triang_model.joblib'), retrieveModel('triang_scaler.joblib'), retrieveModel('triang_score_model.joblib'), retrieveModel('triang_score_scaler.joblib'), predictionComplexScores)
-    drawing, results[17] = pat18.get_score()
+    drawing, results[17]['label'] = pat18.get_score()
+    results[17]['roi'] = pat18.get_ROI() 
     # plt.imshow(drawing)
     # plt.show()    
     
@@ -166,7 +183,7 @@ def find_line(image, points, predictionComplexScores, threshold):
     # plt.show()    
 
     #return the results list from the analysis of all the patterns
-    return results.astype(np.uint8)
+    return results
 
 
 def predictScores(image, points, predictionComplexScores, threshold):

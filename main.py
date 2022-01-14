@@ -6,7 +6,7 @@ from bson import ObjectId
 
 import redis
 from rq import Queue
-import time, datetime
+from datetime import datetime
 
 #TODO: in production we need a pass
 r = redis.Redis()
@@ -36,12 +36,12 @@ app.config['UPLOAD_EXTENSIONS'] = ['.jpg']
 app.config['UPLOAD_PATH'] = './uploads/rocfs'
 
 # TESTT stuff - For testing purposes, you can use this: 
-predictionComplexScores = {
-    "names": "Immagini-01",
-    "scores": [305.1994, 19.02158, 69.96901, 144.1374, 40.056805, 11.410182, 24.091259],
-    "distances": [41.23105625617661, 56.568542494923804, 10.0, 91.92388155425118, 53.85164807134504, 31.622776601683793, 36.05551275463989],
-    "rect": [(334, 159, 54, 254), (782, 327, 87, 86), (607, 383, 230, 151), (792, 169, 268, 312), (399, 250, 123, 156), (350, 555, 150, 155), (482, 510, 308, 121)]
-}
+# predictionComplexScores = {
+#     "names": "Immagini-01",
+#     "scores": [305.1994, 19.02158, 69.96901, 144.1374, 40.056805, 11.410182, 24.091259],
+#     "distances": [41.23105625617661, 56.568542494923804, 10.0, 91.92388155425118, 53.85164807134504, 31.622776601683793, 36.05551275463989],
+#     "rect": [(334, 159, 54, 254), (782, 327, 87, 86), (607, 383, 230, 151), (792, 169, 268, 312), (399, 250, 123, 156), (350, 555, 150, 155), (482, 510, 308, 121)]
+# }
 # predictionTotalScores = [2, 1, 1, 0, 0, 3, 3, 1, 2, 1, 3, 1, 1, 3, 2, 3, 1, 1]
 
 preprocessing_post_args = reqparse.RequestParser()
@@ -56,7 +56,7 @@ preprocessing_post_args.add_argument("constant", type=int, help="Constant is mis
 prediction_post_args = reqparse.RequestParser()
 prediction_post_args.add_argument("patientCode", type=str, help="Patient code is missing", required=True)
 prediction_post_args.add_argument("points", type=list, location="json", help="Image is missing", required=True)
-prediction_post_args.add_argument("date", type=inputs.datetime_from_iso8601, help="Datetime is missing", required=True)
+prediction_post_args.add_argument("date", type=inputs.datetime_from_iso8601, help="Datetime is missing", required=False)
 prediction_post_args.add_argument("imageb64", type=str, help="Image is missing", required=True)
 prediction_post_args.add_argument("threshold", type=int, help="Threshold is missing", required=False)
 prediction_post_args.add_argument("gamma", type=float, help="Gamma is missing", required=False)
@@ -206,6 +206,10 @@ class Prediction(Resource):
         args = prediction_post_args.parse_args()
         img = homography.convertImageB64ToMatrix(args['imageb64'])
 
+        date = args["date"]
+        if date is None:
+            date = datetime.today()
+
         # PREPROCESSING
         threshold = 255
         if args["medium"] == "scan":
@@ -213,17 +217,21 @@ class Prediction(Resource):
         elif  args["medium"] == "photo":
             img = thresholding.preprocessingPhoto(img, args["points"], gamma=args["gamma"], constant= args["adaptiveThresholdC"], blockSize= args["adaptiveThresholdBS"])
         
+        # HARDCODED DOCTOR ID UNTIL LOGIN
+        savedFileName = files.saveROCFImage(img, app.config['UPLOAD_PATH'], "xxxxxx3", args["patientCode"], date)
+
         # PREDICTION
-        # predictionComplexScores = predict_complex_scores.predictComplexScores(img, args['points'])
+        predictionComplexScores = predict_complex_scores.predictComplexScores(img, args['points'])
         predictionTotalScores = predict_simple_scores.predictScores(img, args['points'], predictionComplexScores, threshold=threshold)
         scores = utils.generateScoresFromPrediction(predictionTotalScores)
 
         # SAVE RESULT
         result = {}
-        result["scores"] = scores
+        result["scores"] = fixJSON(scores)
         result["patientCode"] = args["patientCode"]
-        result["date"] = args["date"]
+        result["date"] = date.isoformat()
         result["points"] = args["points"]
+        result["imageName"] = savedFileName
 
         insertResult = db.rocf.insert_one(result)
         result["_id"] = str(insertResult.inserted_id)
@@ -236,17 +244,17 @@ class Prediction(Resource):
         # Predicts on an already binarized image
         args = prediction_post_args.parse_args()
 
+        date = args["date"]
+        if date is None:
+            date = datetime.today()
+
         result = {}
         result["patientCode"] = args["patientCode"]
-        result["date"] = args["date"]
+        result["date"] = date.isoformat()
         result["points"] = args["points"]
 
         insertResult = db.rocf.insert_one(result)
         result["_id"] = str(insertResult.inserted_id)
-
-        # HARDCODED DOCTOR ID UNTIL LOGIN
-        files.saveROCFImage(args["imageb64"], app.config['UPLOAD_PATH'], "xxxxxx3",
-            args["patientCode"], args["date"])
 
         job = q.enqueue(ROCFevaluate, args, insertResult)
 
@@ -310,6 +318,10 @@ class ThresholdedHomographies(Resource):
 
 def ROCFevaluate(args, DBobject):
     img = homography.convertImageB64ToMatrix(args['imageb64'])
+
+    date = args["date"]
+    if date is None:
+        date = datetime.today()
     
     # PREPROCESSING
     threshold = 255
@@ -318,6 +330,9 @@ def ROCFevaluate(args, DBobject):
     elif  args["medium"] == "photo":
         img = thresholding.preprocessingPhoto(img, args["points"], gamma=args["gamma"], constant= args["adaptiveThresholdC"], blockSize= args["adaptiveThresholdBS"])
     
+    # HARDCODED DOCTOR ID UNTIL LOGIN
+    savedFileName = files.saveROCFImage(img, app.config['UPLOAD_PATH'], "xxxxxx3", args["patientCode"], date)
+
     # PREDICTION
     predictionComplexScores = predict_complex_scores.predictComplexScores(img, args['points'])
     predictionTotalScores = predict_simple_scores.predictScores(img, args['points'], predictionComplexScores, threshold=threshold)
@@ -326,6 +341,7 @@ def ROCFevaluate(args, DBobject):
     insertResult = db.rocf.update_one(
         filter = { '_id': DBobject.inserted_id },
         update = { '$set': {
+            'imageName': savedFileName,
             'scores': scores
             }
         }

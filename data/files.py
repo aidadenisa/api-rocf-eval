@@ -5,26 +5,34 @@ import cv2
 from preprocessing import thresholding
 import pandas as pd
 import numpy as np
+from datetime import datetime
 
-def saveROCFImage(imageb64, uploadPath, doctorID, patientCode, datetime):
-    date = datetime.strftime("%d:%m:%Y-%H:%M:%S")
+def saveROCFImage(image, uploadPath, doctorID, patientCode, date):
+    if date is None:
+        date = datetime.today()
+    date = date.strftime("%d:%m:%Y-%H:%M:%S")
     # filename = secure_filename(imageb64.filename)
     filename = patientCode + "_" + date
     doctorFolderPath = os.path.join(uploadPath, doctorID)
 
     if filename != '':
-        image = base64.b64decode(imageb64)
-        # file_ext = os.path.splitext(filename)[1]
-        # if file_ext not in app.config['UPLOAD_EXTENSIONS']:
-        #     abort(400)
-        
-        if not os.path.isdir(doctorFolderPath):
-            os.mkdir(os.path.join(doctorFolderPath))
+        cv2.imwrite(os.path.join(doctorFolderPath, filename +'.png'), image)
 
-        location = os.path.join(doctorFolderPath, filename + ".png")
+    return filename
+
+    # if filename != '':
+    #     image = base64.b64decode(imageb64)
+    #     # file_ext = os.path.splitext(filename)[1]
+    #     # if file_ext not in app.config['UPLOAD_EXTENSIONS']:
+    #     #     abort(400)
         
-        with open(location, "wb") as fh:
-            fh.write(image)
+    #     if not os.path.isdir(doctorFolderPath):
+    #         os.mkdir(os.path.join(doctorFolderPath))
+
+    #     location = os.path.join(doctorFolderPath, filename + ".png")
+        
+    #     with open(location, "wb") as fh:
+    #         fh.write(image)
 
 def generateThresholdedHomographies(sourceFolderURL, destinationFolderURL, type="png"): 
     if not os.path.isdir(sourceFolderURL):

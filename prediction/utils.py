@@ -13,8 +13,9 @@ def generateScoresFromPrediction(predictionTotalScores):
     scores = []
     for i in predictionTotalScores:
         scores.append({
-            'labelNumber': int(i),
-            'label': getLabelFromNumber(i),
-            'score': int(getApproxScoreFromLabelNumber(i))
+            'labelNumber': int(i['label']),
+            'label': getLabelFromNumber(i['label']),
+            'score': int(getApproxScoreFromLabelNumber(i['label'])),
+            'roi': i['roi']
         })
     return scores
