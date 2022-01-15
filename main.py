@@ -229,7 +229,7 @@ class Prediction(Resource):
         result = {}
         result["scores"] = fixJSON(scores)
         result["patientCode"] = args["patientCode"]
-        result["date"] = date.isoformat()
+        result["date"] = date
         result["points"] = args["points"]
         result["imageName"] = savedFileName
 
@@ -250,7 +250,7 @@ class Prediction(Resource):
 
         result = {}
         result["patientCode"] = args["patientCode"]
-        result["date"] = date.isoformat()
+        result["date"] = date
         result["points"] = args["points"]
 
         insertResult = db.rocf.insert_one(result)
@@ -342,7 +342,7 @@ def ROCFevaluate(args, DBobject):
         filter = { '_id': DBobject.inserted_id },
         update = { '$set': {
             'imageName': savedFileName,
-            'scores': scores
+            'scores': fixJSON(scores)
             }
         }
     )
