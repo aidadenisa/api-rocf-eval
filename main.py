@@ -89,6 +89,10 @@ register_post_args.add_argument("email", type=str, help="email is missing", requ
 register_post_args.add_argument("name", type=str, help="name is missing", required=True)
 register_post_args.add_argument("password", type=str, help="password is missing", required=True)
 
+login_post_args = reqparse.RequestParser()
+login_post_args.add_argument("email", type=str, help="email is missing", required=True)
+login_post_args.add_argument("password", type=str, help="password is missing", required=True)
+
 revision_response = {
     "_id": fields.Raw(),
     "_rocfEvaluationId": fields.Raw(),
@@ -375,6 +379,32 @@ class Register(Resource):
         else:
             return {'error': 'The email address is already used'}, 400
 
+class Login(Resource):
+    def post(self):
+        args = login_post_args.parse_args()
+
+        user = db.users.find_one({'email': args['email']})
+        if user is None:
+            return {'error': 'The email or password is wrong'}, 401
+
+        if bcrypt.checkpw(args['password'].encode('utf-8'), user['hash']):
+            
+            # return jwt
+            token = jwt.encode({
+                    'email': args['email'],
+                    'expiration': str(datetime.utcnow() + timedelta(seconds=3000000))
+                },
+                app.config['SECRET_KEY'],
+                algorithm="HS256"
+            )
+            return {'token': token}
+        else:
+            return {'error': 'The email or password is wrong'}, 401
+
+
+
+
+
 def ROCFevaluate(args, DBobject):
     img = homography.convertImageB64ToMatrix(args['imageb64'])
 
@@ -415,6 +445,7 @@ api.add_resource(ROCFRevisions, "/revision")
 api.add_resource(ROCFFiles, "/files", "/files/<string:docID>/<string:filename>")
 api.add_resource(ThresholdedHomographies, "/thresholding")
 api.add_resource(Register, "/register")
+api.add_resource(Login, "/login")
 
 
 env = os.environ.get('FLASK_ENV')
