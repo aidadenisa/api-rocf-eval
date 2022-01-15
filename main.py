@@ -3,16 +3,19 @@ import base64
 import cv2
 import json
 from bson import ObjectId
+import bcrypt
+import jwt
+from functools import wraps
 
 import redis
 from rq import Queue
-from datetime import datetime
+from datetime import datetime, timedelta
 
 #TODO: in production we need a pass
 r = redis.Redis()
 q = Queue(connection=r)
 
-from flask import Flask, request, send_from_directory
+from flask import Flask, request, send_from_directory, jsonify
 from flask_restful import Api, Resource, reqparse, abort, fields, marshal_with, inputs
 from flask_cors import CORS, cross_origin
 from werkzeug.utils import secure_filename
@@ -34,6 +37,7 @@ db = mongoClient.db
 app.config['CORS_HEADERS'] = 'Content-Type'
 app.config['UPLOAD_EXTENSIONS'] = ['.jpg']
 app.config['UPLOAD_PATH'] = './uploads/rocfs'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
 
 # TESTT stuff - For testing purposes, you can use this: 
 # predictionComplexScores = {
@@ -80,6 +84,10 @@ thresholded_homographies_post_args.add_argument("sourceFolderURL", type=str, hel
 thresholded_homographies_post_args.add_argument("destinationFolderURL", type=str, help="Destination folder URL is missing", required=True)
 thresholded_homographies_post_args.add_argument("type", type=str, help="Type is missing", required=False)
 
+register_post_args = reqparse.RequestParser()
+register_post_args.add_argument("email", type=str, help="email is missing", required=True)
+register_post_args.add_argument("name", type=str, help="name is missing", required=True)
+register_post_args.add_argument("password", type=str, help="password is missing", required=True)
 
 revision_response = {
     "_id": fields.Raw(),
@@ -165,6 +173,30 @@ class HelloWorld(Resource):
         # send back result and status code to client
         return  videos[name], 201
 '''
+
+def token_required(func):
+    @wraps(func)
+    def decorated(*args, **kwargs):
+        token = None
+
+        if 'x-access-token' in request.headers:
+            token = request.headers['x-access-token']
+        elif 'Authorization' in request.headers:
+            token = request.headers['Authorization'].split(' ')[1]
+        
+        if not token:
+            return {'error':'you must be logged in'}, 401
+
+        try:
+            payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
+            # here I can query the user if I want
+            current_user = db.users.find_one({'email': payload['email']})
+        except:
+            return {'error':'Invalid Token!'}, 401
+
+        return func(current_user, *args, **kwargs)
+    
+    return decorated
 
 class Preprocessing(Resource):
     @cross_origin()
@@ -266,7 +298,8 @@ class ROCFEvaluation(Resource):
         return fixJSON(result), 200
 
 class ROCFEvaluationsList(Resource): 
-    def get(self):
+    @token_required
+    def get(self, current_user):
         #use 1 for accending, -1 for decending
         result = list(db.rocf.find().sort('date', -1).limit(20))
         return fixJSON(result), 200
@@ -314,7 +347,33 @@ class ThresholdedHomographies(Resource):
         # TODO: allow this to happen from the DB as well
         files.generateThresholdedHomographies(args["sourceFolderURL"], args["destinationFolderURL"], type=args["type"])
         return 200
-   
+
+class Register(Resource):
+    def post(self):
+        args = register_post_args.parse_args()
+    
+        # check if the user already exists in the DB
+        existing_user = db.users.find_one({'email': args['email']})
+        if existing_user is None:
+            hash = bcrypt.hashpw(args['password'].encode('utf-8'), bcrypt.gensalt())
+            db.users.insert_one({
+                'name': args['name'],
+                'email': args['email'],
+                'hash': hash
+            })
+
+            # return jwt
+            token = jwt.encode({
+                    'email': args['email'],
+                    'name': args['name'],
+                    'expiration': str(datetime.utcnow() + timedelta(seconds=3000000))
+                },
+                app.config['SECRET_KEY'],
+                algorithm="HS256"
+            )
+            return {'token': token}
+        else:
+            return {'error': 'The email address is already used'}, 400
 
 def ROCFevaluate(args, DBobject):
     img = homography.convertImageB64ToMatrix(args['imageb64'])
@@ -355,6 +414,7 @@ api.add_resource(ROCFEvaluation, "/rocf/<string:id>")
 api.add_resource(ROCFRevisions, "/revision")
 api.add_resource(ROCFFiles, "/files", "/files/<string:docID>/<string:filename>")
 api.add_resource(ThresholdedHomographies, "/thresholding")
+api.add_resource(Register, "/register")
 
 
 env = os.environ.get('FLASK_ENV')
