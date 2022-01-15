@@ -204,6 +204,7 @@ def token_required(func):
 
 class Preprocessing(Resource):
     @cross_origin()
+    @token_required
     @marshal_with(homography_fields)
     def post(self):
         # GAMMA TRANSFORM
@@ -219,6 +220,7 @@ class Preprocessing(Resource):
         result["image"] = imgb64
         return result
     @cross_origin()
+    @token_required
     @marshal_with(homography_fields)
     def put(self):
         # ADAPTIVE THRESHOLDING
@@ -236,6 +238,7 @@ class Preprocessing(Resource):
         return result
 class Prediction(Resource):
     @cross_origin()
+    @token_required
     # @marshal_with(prediction_response)
     def post(self):
         # Predicts on an already binarized image
@@ -275,6 +278,7 @@ class Prediction(Resource):
 
     # THIS IS THE ENDPOINT THAT IS ACCESSED FROM THE CLIENT
     @cross_origin()
+    @token_required
     @marshal_with(prediction_response)
     def put(self):
         # Predicts on an already binarized image
@@ -296,6 +300,7 @@ class Prediction(Resource):
 
         return result
 class ROCFEvaluation(Resource): 
+    @token_required
     def get(self, id):
         #use 1 for accending, -1 for decending
         result = db.rocf.find_one({'_id': ObjectId(id)})
@@ -311,6 +316,7 @@ class ROCFEvaluationsList(Resource):
 
 class ROCFRevisions(Resource): 
     # @marshal_with(revision_response)
+    @token_required
     def post(self):
         args = revision_post_args.parse_args()
         evaluationId = args['_rocfEvaluationId']
@@ -334,10 +340,12 @@ class ROCFRevisions(Resource):
         return fixJSON(result), 200
 
 class ROCFFiles(Resource): 
+    @token_required
     def get(self, docID, filename):
         doctorFolderPath = os.path.join(app.config['UPLOAD_PATH'], docID)
         return send_from_directory(doctorFolderPath, filename)
-
+    
+    @token_required
     def post(self):
         args = upload_rocf_post_args.parse_args()
         files.saveROCFImage(args["imageb64"], app.config['UPLOAD_PATH'], args["doctorID"],
@@ -345,6 +353,7 @@ class ROCFFiles(Resource):
         return 200
 
 class ThresholdedHomographies(Resource): 
+    @token_required
     def post(self):
         args = thresholded_homographies_post_args.parse_args()
         # for now, the dataset and the points can be found on the same server, in the sourcefolder
@@ -360,7 +369,7 @@ class Register(Resource):
         existing_user = db.users.find_one({'email': args['email']})
         if existing_user is None:
             hash = bcrypt.hashpw(args['password'].encode('utf-8'), bcrypt.gensalt())
-            db.users.insert_one({
+            new_user = db.users.insert_one({
                 'name': args['name'],
                 'email': args['email'],
                 'hash': hash
@@ -370,12 +379,18 @@ class Register(Resource):
             token = jwt.encode({
                     'email': args['email'],
                     'name': args['name'],
+                    'id': str(new_user.inserted_id),
                     'expiration': str(datetime.utcnow() + timedelta(seconds=3000000))
                 },
                 app.config['SECRET_KEY'],
                 algorithm="HS256"
             )
-            return {'token': token}
+            return {
+                'token': token,
+                'email': args['email'],
+                'name': args['name'],
+                'id': str(new_user.inserted_id),
+            }
         else:
             return {'error': 'The email address is already used'}, 400
 
@@ -391,13 +406,20 @@ class Login(Resource):
             
             # return jwt
             token = jwt.encode({
-                    'email': args['email'],
+                    'email': user['email'],
+                    'name': user['name'],
+                    'id': str(user['_id']),
                     'expiration': str(datetime.utcnow() + timedelta(seconds=3000000))
                 },
                 app.config['SECRET_KEY'],
                 algorithm="HS256"
             )
-            return {'token': token}
+            return {
+                'token': token,
+                'email': user['email'],
+                'name': user['name'],
+                'id': str(user['_id']),
+            }
         else:
             return {'error': 'The email or password is wrong'}, 401
 
