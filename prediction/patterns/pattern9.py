@@ -17,11 +17,12 @@ line = [(852 - dist - 100, 219), (852, 219)]
 def buildROIs(triangle):
   rois = []
 
-  roi = Polygon([tuple(p) for p in triangle])
-  buffer = roi.buffer(30, cap_style=CAP_STYLE.square)
-  simplified = buffer.simplify(tolerance=0.95, preserve_topology=True)
-  coords = np.array(list(simplified.exterior.coords)).astype(int)
-  rois.append(coords.tolist())
+  if len(triangle) > 2:
+    roi = Polygon([tuple(p) for p in triangle])
+    buffer = roi.buffer(30, cap_style=CAP_STYLE.square)
+    simplified = buffer.simplify(tolerance=0.95, preserve_topology=True)
+    coords = np.array(list(simplified.exterior.coords)).astype(int)
+    rois.append(coords.tolist())
 
   return rois
 

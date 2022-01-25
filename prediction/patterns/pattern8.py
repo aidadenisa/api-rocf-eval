@@ -134,11 +134,12 @@ def diag_eq(diag, y):
 def buildROIs(lines): 
   rois = []
   points = np.array(lines).reshape(-1, 2)
-  roi = Polygon([tuple(p) for p in points]).convex_hull
-  buffer = roi.buffer(30, cap_style=CAP_STYLE.square)
-  simplified = buffer.simplify(tolerance=0.95, preserve_topology=True)
-  coords = np.array(list(simplified.exterior.coords)).astype(int)
-  rois.append(coords.tolist())
+  if len(points) > 2:
+    roi = Polygon([tuple(p) for p in points]).convex_hull
+    buffer = roi.buffer(30, cap_style=CAP_STYLE.square)
+    simplified = buffer.simplify(tolerance=0.95, preserve_topology=True)
+    coords = np.array(list(simplified.exterior.coords)).astype(int)
+    rois.append(coords.tolist())
   
   return rois
 

@@ -194,11 +194,12 @@ def token_required(func):
         try:
             payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
             # here I can query the user if I want
-            current_user = db.users.find_one({'email': payload['email']})
+            # current_user = db.users.find_one({'email': payload['email']})
         except:
             return {'error':'Invalid Token!'}, 401
 
-        return func(current_user, *args, **kwargs)
+        # return func(current_user, *args, **kwargs)
+        return func(*args, **kwargs)
     
     return decorated
 
@@ -308,7 +309,7 @@ class ROCFEvaluation(Resource):
 
 class ROCFEvaluationsList(Resource): 
     @token_required
-    def get(self, current_user):
+    def get(self):
         #use 1 for accending, -1 for decending
         result = list(db.rocf.find().sort('date', -1).limit(20))
         return fixJSON(result), 200
