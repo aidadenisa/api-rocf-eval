@@ -7,16 +7,25 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 
-def saveROCFImage(image, uploadPath, doctorID, patientCode, date):
+def saveROCFImages(original, threshed, uploadPath, doctorID, patientCode, date):
     if date is None:
         date = datetime.today()
     date = date.strftime("%d:%m:%Y-%H:%M:%S")
     # filename = secure_filename(imageb64.filename)
     filename = patientCode + "_" + date
     doctorFolderPath = os.path.join(uploadPath, doctorID)
+    if not os.path.isdir(doctorFolderPath):
+        os.mkdir(os.path.join(doctorFolderPath))
+    originalFolderPath = os.path.join(doctorFolderPath, 'original')
+    if not os.path.isdir(originalFolderPath):
+        os.mkdir(os.path.join(originalFolderPath))
+    threshedFolderPath = os.path.join(doctorFolderPath, 'threshed')
+    if not os.path.isdir(threshedFolderPath):
+        os.mkdir(os.path.join(threshedFolderPath))
 
     if filename != '':
-        cv2.imwrite(os.path.join(doctorFolderPath, filename +'.png'), image)
+        cv2.imwrite(os.path.join(originalFolderPath, filename +'.png'), original)
+        cv2.imwrite(os.path.join(threshedFolderPath, filename +'.png'), threshed)
 
     return filename
 

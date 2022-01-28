@@ -232,5 +232,7 @@ def getMostFrequentColor(img):
     mask = img>0
     only_color = img[mask]
     colors, count = np.unique(only_color, return_counts=True)
+    # max_color = 0
+    # if len(count) > 0:
     max_color = colors[count.argmax()]
     return max_color

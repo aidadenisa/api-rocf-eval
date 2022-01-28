@@ -244,7 +244,7 @@ class Prediction(Resource):
     def post(self):
         # Predicts on an already binarized image
         args = prediction_post_args.parse_args()
-        img = homography.convertImageB64ToMatrix(args['imageb64'])
+        original = homography.convertImageB64ToMatrix(args['imageb64'])
 
         date = args["date"]
         if date is None:
@@ -253,12 +253,12 @@ class Prediction(Resource):
         # PREPROCESSING
         threshold = 255
         if args["medium"] == "scan":
-            img, threshold = thresholding.preprocessingScans(img, args["threshold"])
-        elif  args["medium"] == "photo":
-            img = thresholding.preprocessingPhoto(img, args["points"], gamma=args["gamma"], constant= args["adaptiveThresholdC"], blockSize= args["adaptiveThresholdBS"])
+            img, threshold = thresholding.preprocessingScans(original, args["threshold"])
+        elif args["medium"] == "photo":
+            img = thresholding.preprocessingPhoto(original, args["points"], gamma=args["gamma"], constant= args["adaptiveThresholdC"], blockSize= args["adaptiveThresholdBS"])
         
         # HARDCODED DOCTOR ID UNTIL LOGIN
-        savedFileName = files.saveROCFImage(img, app.config['UPLOAD_PATH'], "xxxxxx3", args["patientCode"], date)
+        savedFileName = files.saveROCFImages(original, img, app.config['UPLOAD_PATH'], "xxxxxx3", args["patientCode"], date)
 
         # PREDICTION
         predictionComplexScores = predict_complex_scores.predictComplexScores(img, args['points'])
@@ -342,16 +342,16 @@ class ROCFRevisions(Resource):
 
 class ROCFFiles(Resource): 
     @token_required
-    def get(self, docID, filename):
-        doctorFolderPath = os.path.join(app.config['UPLOAD_PATH'], docID)
+    def get(self, docID, version, filename):
+        doctorFolderPath = os.path.join(app.config['UPLOAD_PATH'], docID, version)
         return send_from_directory(doctorFolderPath, filename)
     
-    @token_required
-    def post(self):
-        args = upload_rocf_post_args.parse_args()
-        files.saveROCFImage(args["imageb64"], app.config['UPLOAD_PATH'], args["doctorID"],
-            args["patientCode"], args["date"])
-        return 200
+    # @token_required
+    # def post(self):
+    #     args = upload_rocf_post_args.parse_args()
+    #     files.saveROCFImage(args["imageb64"], app.config['UPLOAD_PATH'], args["doctorID"],
+    #         args["patientCode"], args["date"])
+    #     return 200
 
 class ThresholdedHomographies(Resource): 
     @token_required
@@ -429,7 +429,7 @@ class Login(Resource):
 
 
 def ROCFevaluate(args, DBobject):
-    img = homography.convertImageB64ToMatrix(args['imageb64'])
+    original = homography.convertImageB64ToMatrix(args['imageb64'])
 
     date = args["date"]
     if date is None:
@@ -438,12 +438,12 @@ def ROCFevaluate(args, DBobject):
     # PREPROCESSING
     threshold = 255
     if args["medium"] == "scan":
-        img, threshold = thresholding.preprocessingScans(img, args["threshold"])
+        img, threshold = thresholding.preprocessingScans(original, args["threshold"])
     elif  args["medium"] == "photo":
-        img = thresholding.preprocessingPhoto(img, args["points"], gamma=args["gamma"], constant= args["adaptiveThresholdC"], blockSize= args["adaptiveThresholdBS"])
+        img = thresholding.preprocessingPhoto(original, args["points"], gamma=args["gamma"], constant= args["adaptiveThresholdC"], blockSize= args["adaptiveThresholdBS"])
     
     # HARDCODED DOCTOR ID UNTIL LOGIN
-    savedFileName = files.saveROCFImage(img, app.config['UPLOAD_PATH'], "xxxxxx3", args["patientCode"], date)
+    savedFileName = files.saveROCFImages(original, img, app.config['UPLOAD_PATH'], "xxxxxx3", args["patientCode"], date)
 
     # PREDICTION
     predictionComplexScores = predict_complex_scores.predictComplexScores(img, args['points'])
@@ -465,7 +465,7 @@ api.add_resource(Prediction, "/prediction")
 api.add_resource(ROCFEvaluationsList, "/rocf")
 api.add_resource(ROCFEvaluation, "/rocf/<string:id>")
 api.add_resource(ROCFRevisions, "/revision")
-api.add_resource(ROCFFiles, "/files", "/files/<string:docID>/<string:filename>")
+api.add_resource(ROCFFiles, "/files", "/files/<string:docID>/<string:version>/<string:filename>")
 api.add_resource(ThresholdedHomographies, "/thresholding")
 api.add_resource(Register, "/register")
 api.add_resource(Login, "/login")
