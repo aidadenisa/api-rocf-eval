@@ -22,7 +22,7 @@ from werkzeug.utils import secure_filename
 
 
 from preprocessing import homography, thresholding
-from prediction import predict_complex_scores, predict_simple_scores, model_storage, utils
+from prediction import predict_complex_scores, predict_simple_scores, model_storage, utils, predict_classification
 from data import database, files
 from data.utils import fixJSON
 
@@ -40,13 +40,13 @@ app.config['UPLOAD_PATH'] = './uploads/rocfs'
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
 
 # TESTT stuff - For testing purposes, you can use this: 
-# predictionComplexScores = {
-#     "names": "Immagini-01",
-#     "scores": [305.1994, 19.02158, 69.96901, 144.1374, 40.056805, 11.410182, 24.091259],
-#     "distances": [41.23105625617661, 56.568542494923804, 10.0, 91.92388155425118, 53.85164807134504, 31.622776601683793, 36.05551275463989],
-#     "rect": [(334, 159, 54, 254), (782, 327, 87, 86), (607, 383, 230, 151), (792, 169, 268, 312), (399, 250, 123, 156), (350, 555, 150, 155), (482, 510, 308, 121)]
-# }
-# predictionTotalScores = [2, 1, 1, 0, 0, 3, 3, 1, 2, 1, 3, 1, 1, 3, 2, 3, 1, 1]
+predictionComplexScores = {
+    "names": "Immagini-01",
+    "scores": [305.1994, 19.02158, 69.96901, 144.1374, 40.056805, 11.410182, 24.091259],
+    "distances": [41.23105625617661, 56.568542494923804, 10.0, 91.92388155425118, 53.85164807134504, 31.622776601683793, 36.05551275463989],
+    "rect": [(334, 159, 54, 254), (782, 327, 87, 86), (607, 383, 230, 151), (792, 169, 268, 312), (399, 250, 123, 156), (350, 555, 150, 155), (482, 510, 308, 121)]
+}
+# predictionTotalScores = [{'label': 3, 'roi': [[[817, 585], [841, 604], [878, 556], [385, 173], [348, 221], [817, 585]], [[372, 498], [346, 514], [378, 565], [906, 235], [874, 184], [372, 498]]]}, {'label': 1, 'roi': [[[353, 188], [896, 187], [882, 560], [353, 565]], [[413, 231], [836, 228], [822, 517], [413, 524]]]}, {'label': 2, 'roi': [[[399, 250], [522, 250], [522, 406], [399, 406]]]}, {'label': 0, 'roi': []}, {'label': 1, 'roi': [[[334, 159], [388, 159], [388, 413], [334, 413]]]}, {'label': 3, 'roi': [[[388, 357], [358, 359], [363, 419], [873, 377], [903, 375], [898, 315], [388, 357]]]}, {'label': 2, 'roi': [[[718, 209], [723, 179], [664, 169], [595, 542], [590, 572], [649, 582], [718, 209]]]}, {'label': 1, 'roi': [[[657, 221], [652, 210], [647, 203], [639, 199], [628, 197], [424, 213], [413, 216], [404, 223], [398, 233], [397, 245], [400, 256], [405, 263], [472, 332], [482, 339], [490, 341], [634, 355], [648, 350], [658, 340], [661, 331], [669, 291], [669, 280], [657, 221]]]}, {'label': 0, 'roi': []}, {'label': 2, 'roi': [[[782, 327], [869, 327], [869, 413], [782, 413]]]}, {'label': 0, 'roi': []}, {'label': 1, 'roi': [[[607, 383], [837, 383], [837, 534], [607, 534]]]}, {'label': 1, 'roi': [[[916, 486], [917, 516], [977, 513], [962, 280], [961, 250], [901, 253], [916, 486]]]}, {'label': 3, 'roi': [[[1038, 319], [1032, 378], [1047, 380], [1051, 387], [1058, 393], [1065, 397], [1077, 398], [1085, 397], [1093, 392], [1114, 372], [1119, 361], [1119, 349], [1115, 338], [1107, 330], [1096, 325], [1038, 319]]]}, {'label': 2, 'roi': [[[350, 555], [500, 555], [500, 710], [350, 710]]]}, {'label': 3, 'roi': [[[830, 321], [800, 321], [801, 381], [1111, 375], [1141, 375], [1140, 315], [830, 321]]]}, {'label': 1, 'roi': [[[482, 510], [790, 510], [790, 631], [482, 631]]]}, {'label': 1, 'roi': [[[792, 169], [1060, 169], [1060, 481], [792, 481]]]}]
 
 preprocessing_post_args = reqparse.RequestParser()
 preprocessing_post_args.add_argument("imageb64", type=str, help="Image is missing", required=True)
@@ -261,8 +261,9 @@ class Prediction(Resource):
         savedFileName = files.saveROCFImages(original, img, app.config['UPLOAD_PATH'], "xxxxxx3", args["patientCode"], date)
 
         # PREDICTION
-        predictionComplexScores = predict_complex_scores.predictComplexScores(img, args['points'])
+        # predictionComplexScores = predict_complex_scores.predictComplexScores(img, args['points'])
         predictionTotalScores = predict_simple_scores.predictScores(img, args['points'], predictionComplexScores, threshold=threshold)
+        predictionDiagnosis = predict_classification.predictDiagnosis(predictionTotalScores)
         scores = utils.generateScoresFromPrediction(predictionTotalScores)
 
         # SAVE RESULT
@@ -272,6 +273,7 @@ class Prediction(Resource):
         result["date"] = date
         result["points"] = args["points"]
         result["imageName"] = savedFileName
+        result["diagnosis"] = predictionDiagnosis
 
         insertResult = db.rocf.insert_one(result)
         result["_id"] = str(insertResult.inserted_id)
@@ -448,13 +450,15 @@ def ROCFevaluate(args, DBobject):
     # PREDICTION
     predictionComplexScores = predict_complex_scores.predictComplexScores(img, args['points'])
     predictionTotalScores = predict_simple_scores.predictScores(img, args['points'], predictionComplexScores, threshold=threshold)
+    predictionDiagnosis = predict_classification.predictDiagnosis(predictionTotalScores)
     scores = utils.generateScoresFromPrediction(predictionTotalScores)
 
     insertResult = db.rocf.update_one(
         filter = { '_id': DBobject.inserted_id },
         update = { '$set': {
             'imageName': savedFileName,
-            'scores': fixJSON(scores)
+            'scores': fixJSON(scores),
+            'diagnosis': predictionDiagnosis
             }
         }
     )

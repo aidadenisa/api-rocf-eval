@@ -38,12 +38,7 @@ def retrieveModel(localPath):
     model = None
     environment = os.environ.get('FLASK_ENV')
     # if environment == 'development':
-    if environment == 'production':
-        with tempfile.NamedTemporaryFile(mode='w+b') as f:
-            client.download_fileobj('rocf-models', localPath, f)
-            f.seek(0)
-            model = joblib.load(f.name)
-    elif localPath is not None: 
+    if localPath is not None: 
         model = joblib.load(models_folder + localPath)
     return model
 
