@@ -51,6 +51,16 @@ def predictComplexScores(image, points):
         or_points2[x][0:2]-=pad
         or_points2[x][2:]+=pad
         or_points2[x] = or_points2[x].tolist()
+    
+    # Display the ROIs on the image
+    # iiiiimage = cv2.cvtColor(image,cv2.COLOR_GRAY2RGB)
+    # iiiiimage = cv2.rectangle(iiiiimage, (or_points2['cross'][0], or_points2['cross'][1]), (or_points2['cross'][2], or_points2['cross'][3]), (0,255, 0), 2)
+    # iiiiimage = cv2.rectangle(iiiiimage, (or_points2['face'][0], or_points2['face'][1]), (or_points2['face'][2], or_points2['face'][3]), (0,255, 0), 2)
+    # iiiiimage = cv2.rectangle(iiiiimage, (or_points2['rail'][0], or_points2['rail'][1]), (or_points2['rail'][2], or_points2['rail'][3]), (0,255, 0), 2)
+    # iiiiimage = cv2.rectangle(iiiiimage, (or_points2['rhomb'][0], or_points2['rhomb'][1]), (or_points2['rhomb'][2], or_points2['rhomb'][3]), (0,255, 0), 2)
+    # iiiiimage = cv2.rectangle(iiiiimage, (or_points2['rett_diag'][0], or_points2['rett_diag'][1]), (or_points2['rett_diag'][2], or_points2['rett_diag'][3]), (0,255, 0), 2)
+    # iiiiimage = cv2.rectangle(iiiiimage, (or_points2['rect'][0], or_points2['rect'][1]), (or_points2['rect'][2], or_points2['rect'][3]), (0,255, 0), 2)
+    # iiiiimage = cv2.rectangle(iiiiimage, (or_points2['cross_vert'][0], or_points2['cross_vert'][1]), (or_points2['cross_vert'][2], or_points2['cross_vert'][3]), (0,255, 0), 2)
 
     csv_file = open(os.path.join(root, 'results', 'scores.csv'), mode='a')
     writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
@@ -78,7 +88,7 @@ or_points = {
     "face":[742, 287, 829, 373],
     "rail":[617, 383, 847, 534],
     "rhomb":[852, 229, 531],
-    "rett_diag":[379, 300, 502, 456],
+    "rett_diag":[359, 280, 522, 476],
     "rect":[360, 525, 510, 680],
     "cross_vert":[502, 540, 810, 661]
 }

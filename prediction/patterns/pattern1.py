@@ -242,11 +242,12 @@ for external1, external1_rot_sx,  external1_rot_dx, external2, external2_rot_sx,
 def buildROIs(diagonals): 
   rois = []
   for diag in diagonals:
-    line = LineString([tuple(diag[0]),tuple(diag[1])])
-    buffer = line.buffer(30, cap_style=CAP_STYLE.square)
-    simplified = buffer.simplify(tolerance=0.95, preserve_topology=True)
-    coords = np.array(list(simplified.exterior.coords)).astype(int)
-    rois.append(coords.tolist())
+    if diag is not None:
+      line = LineString([tuple(diag[0]),tuple(diag[1])])
+      buffer = line.buffer(30, cap_style=CAP_STYLE.square)
+      simplified = buffer.simplify(tolerance=0.95, preserve_topology=True)
+      coords = np.array(list(simplified.exterior.coords)).astype(int)
+      rois.append(coords.tolist())
   
   return rois
 

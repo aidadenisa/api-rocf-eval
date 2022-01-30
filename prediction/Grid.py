@@ -44,9 +44,9 @@ class Grid():
             y = max(0, y)
             ROI = image[y:y + self.h, x:x + self.w]
             # threshed =  np.array(homography.sharpenDrawing(ROI))
-            ROI_expanded = homography.expandDrawing(ROI)
+            # ROI_expanded = homography.expandDrawing(ROI)
 
-            input_img = homography.background_thumbnail(ROI_expanded, 'L', (input_shape[0], input_shape[1]))
+            input_img = homography.background_thumbnail(ROI, 'L', (input_shape[0], input_shape[1]))
             input_img = input_img.astype('float32')
             input_img /= 255
             input_img =  np.repeat(input_img[..., np.newaxis], 3, -1)            

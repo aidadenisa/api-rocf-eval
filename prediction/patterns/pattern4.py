@@ -24,8 +24,8 @@ def getBackground(external, img, morph=False, ret_hier=False, internal=None, thr
     #plt.imshow(overlap)
     #plt.show()
     background_t = cv2.bitwise_or(not_background_t,background_t)
-    if threshold > 245:
-        background_t = np.ones(interval, dtype=np.uint8) * 255
+    # if threshold > 245:
+    #     background_t = np.ones(interval, dtype=np.uint8) * 255
     background = np.ones_like(img) * 255
     background[min(points[:,1]):max(points[:,1]), min(points[:,0]):max(points[:,0])] = background_t
     if morph:
@@ -57,7 +57,7 @@ def best_line(backgrounds, idx, only_length, external, draw=False, drawing=None)
         for i in range(0, len(lines_filtered)):
             l = lines_filtered[i][0]
             inclination = np.abs(np.rad2deg(np.arctan2(l[3] - l[1], l[2] - l[0])))
-            if inclination < 10:
+            if inclination < 20:
                 points.append((l[0], l[1]))
                 if l[0] < max_left:
                     max_left = l[0]
@@ -109,10 +109,10 @@ def int_coverage(lines_filtered, external, drawing=False):
     #  print('coverage pattern 3= {}%'.format(coverage))
     return coverage
 
-pad_v = 5
+pad_v = 10
 pad_h = 10
-pad_move = 10
-pad_move_d = 5
+pad_move = 4
+pad_move_d = 4
 
 # TODO: try to extract
 def diag_eq(diag, y):
@@ -192,7 +192,7 @@ class Pattern4:
     
     if lines_found.shape[0] >= 2:    
       (max_left, lefty), (max_right, righty) = lines_found[0]             
-      if np.abs(np.rad2deg(np.arctan2(righty - lefty, max_right - max_left))) < 10:
+      if np.abs(np.rad2deg(np.arctan2(righty - lefty, max_right - max_left))) < 20:
         #print('best inclination: {}'.format(np.abs(np.rad2deg(np.arctan2(righty - lefty, max_right - max_left)))))
         rect_or = np.array([[max_left, lefty], [max_right, righty]])
 
