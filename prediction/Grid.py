@@ -38,6 +38,9 @@ class Grid():
     def visualize(self, image, model, input_shape, template, idx, name):               
         min_val = np.inf
         save_min = False
+
+        dataset_images = []
+
         for i in range(len(self.grid)):                     
             x, y = self.grid[i]
             x = max(0, x)
@@ -50,39 +53,39 @@ class Grid():
             input_img = input_img.astype('float32')
             input_img /= 255
             input_img =  np.repeat(input_img[..., np.newaxis], 3, -1)            
-            #plt.imshow(input_img[:,:,0], cmap='gray')            
-            #plt.show()
-            #print(input_img.shape)
-            #print(template.shape)
-            #inp = np.array([[input_img], [template]])
-            #print(inp.shape)
+
+            dataset_images.append(input_img)
             
-            # send image and template to model for prediction
-            result = model.predict([[input_img.reshape(1,100,100,3)], [template.reshape(1,100,100,3)]])
-            embeddings = result
-            # calculate the pairwise distance between all embeddings
-            result = triplet_loss._pairwise_distances(embeddings, squared=False).numpy()[0, 0]
-            # save the minimum distance
-            if result < min_val:
-                min_val = result
-                save_min = True
-                min_y = y
-                min_x = x
-                min_input = input_img
-                #min_bbox = bbox
-            #if i in values:
-              #print('done percent {} of template {}'.format(10*np.where(values == i)[0][0], idx))
+        dataset_anchors = [template for i in range(len(dataset_images))]
+        dataset_images = np.array(dataset_images)
+        dataset_anchors = np.array(dataset_anchors)
         
+        result = model.predict([dataset_images, dataset_anchors], batch_size=32)
+
+        for i in range(len(result)):
+            distance = triplet_loss._pairwise_distances(np.array([result[i]]), squared=False).numpy()[0, 0]
+            if distance < min_val:
+                min_val = distance
+                save_min = True
+                x, y = self.grid[i]
+                min_x = max(0, x)
+                min_y = max(0, y)
+                
         done = False
         min_w = self.w
         min_h = self.h
         min_x2 = min_x
         min_y2 = min_y
         iteraction = 0
+
         while not done and iteraction < 5:
           found_min = False
+          dataset_images = []
+          dataset_anchors = []
+          coords_actions = []
           for action in self.actions:
               (x, y, w, h) = action(min_x, min_y, min_w, min_h)
+              coords_actions.append([x, y, w, h])
               ROI = image[y:y + h, x:x + w]
               # threshed = np.array(homography.sharpenDrawing(ROI))
               ROI_expanded = homography.expandDrawing(ROI)
@@ -92,19 +95,27 @@ class Grid():
               input_img = input_img.astype('float32')
               input_img /= 255
               input_img =  np.repeat(input_img[..., np.newaxis], 3, -1)
-              #plt.imshow(input_img[:,:,0], cmap='gray')
-              #plt.show()
-              result = model.predict([[input_img.reshape(1,100,100,3)], [template.reshape(1,100,100,3)]])
-              embeddings = result
-              result = triplet_loss._pairwise_distances(embeddings, squared=False).numpy()[0, 0]
-              if result < min_val:
-                  min_val = result
-                  min_x2 = x
-                  min_y2 = y
-                  min_w = w
-                  min_h = h
-                  min_input = input_img
-                  found_min = True
+
+              dataset_images.append(input_img)
+
+          dataset_anchors = [template for i in range(len(dataset_images))]
+          dataset_images = np.array(dataset_images)
+          dataset_anchors = np.array(dataset_anchors)
+        
+          result = model.predict([dataset_images, dataset_anchors], batch_size=32)
+
+          for i in range(len(result)):
+            distance = triplet_loss._pairwise_distances(np.array([result[i]]), squared=False).numpy()[0, 0]
+            if distance < min_val:
+                min_val = distance
+                # (x, y, w, h)
+                min_x2 = coords_actions[i][0]
+                min_y2 = coords_actions[i][1]
+                min_w = coords_actions[i][2]
+                min_h = coords_actions[i][3]
+                min_input = input_img
+                found_min = True
+              
           if found_min:
             min_x = min_x2
             min_y = min_y2
@@ -115,22 +126,5 @@ class Grid():
           iteraction += 1
           print('done iteration {}'.format(iteraction))
         
-        #print(min_bbox)
-        clone2 = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
-        cv2.rectangle(clone2, (min_x2, min_y2), (min_x2 + min_w, min_y2 + min_h), color=(255, 0, 0))        
-        cv2.putText(clone2, str(min_val), (x + 20, y + 80), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1,
-          color=(0, 0, 255))                
-        cv2.rectangle(clone2, (self.x, self.y), (self.x+self.w, self.y+self.h), color=(0,0,255))
-        #cv2.rectangle(clone2, (min_x+min_bbox[0], min_y+min_bbox[1]), (min_x+min_bbox[0]+min_bbox[2], min_y+min_bbox[1]+min_bbox[3]), color=(0,255,0))
-        # plt.imshow(cv2.cvtColor(clone2, cv2.COLOR_BGR2RGB))
-        # plt.show() 
-        #plt.close('all')           
-        cv2.imwrite(os.path.join(result_folder, name, 'minimum_'+str(idx)+'.png'), clone2)
-        # fig, ax = plt.subplots(nrows=1, ncols=2)
-        # ax.ravel()[0].imshow(min_input[:,:,0], cmap='gray')
-        # ax.ravel()[1].imshow(template[:,:,0], cmap='gray')
-        # # plt.savefig(os.path.join(result_folder, name, 'input_'+str(idx)+'.png'))
-        #plt.show()
-        # plt.close('all')    
         print('done template {}'.format(idx))    
         return min_val, math.hypot(int(min_x2-min_w/2-(self.x-self.w/2)), int(min_y2-min_h/2-(self.y-self.h/2))), (min_x2, min_y2, min_w, min_h)
