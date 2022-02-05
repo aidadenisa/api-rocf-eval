@@ -194,18 +194,17 @@ def token_required(func):
         try:
             payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
             # here I can query the user if I want
-            # current_user = db.users.find_one({'email': payload['email']})
+            current_user = db.users.find_one({'email': payload['email']})
         except:
             return {'error':'Invalid Token!'}, 401
 
         # return func(current_user, *args, **kwargs)
-        return func(*args, **kwargs)
+        return func(current_user, *args, **kwargs)
     
     return decorated
 
 class Preprocessing(Resource):
     @cross_origin()
-    @token_required
     @marshal_with(homography_fields)
     def post(self):
         # GAMMA TRANSFORM
@@ -221,7 +220,6 @@ class Preprocessing(Resource):
         result["image"] = imgb64
         return result
     @cross_origin()
-    @token_required
     @marshal_with(homography_fields)
     def put(self):
         # ADAPTIVE THRESHOLDING
@@ -241,7 +239,7 @@ class Prediction(Resource):
     @cross_origin()
     @token_required
     # @marshal_with(prediction_response)
-    def post(self):
+    def post(current_user, self):
         # Predicts on an already binarized image
         args = prediction_post_args.parse_args()
         original = homography.convertImageB64ToMatrix(args['imageb64'])
@@ -258,7 +256,7 @@ class Prediction(Resource):
             img = thresholding.preprocessingPhoto(original, args["points"], gamma=args["gamma"], constant= args["adaptiveThresholdC"], blockSize= args["adaptiveThresholdBS"])
         
         # HARDCODED DOCTOR ID UNTIL LOGIN
-        savedFileName = files.saveROCFImages(original, img, app.config['UPLOAD_PATH'], "xxxxxx3", args["patientCode"], date)
+        savedFileName = files.saveROCFImages(original, img, app.config['UPLOAD_PATH'], str(current_user['_id']), args["patientCode"], date)
 
         # PREDICTION
         predictionComplexScores = predict_complex_scores.predictComplexScores(img, args['points'])
@@ -268,22 +266,25 @@ class Prediction(Resource):
 
         # SAVE RESULT
         result = {}
+        result["_doctorID"] = current_user['_id']
         result["scores"] = fixJSON(scores)
         result["patientCode"] = args["patientCode"]
         result["date"] = date
         result["points"] = args["points"]
         result["imageName"] = savedFileName
         result["diagnosis"] = predictionDiagnosis
+        
 
         insertResult = db.rocf.insert_one(result)
         result["_id"] = str(insertResult.inserted_id)
-        return result
+        result["_doctorID"] = str(result["_doctorID"])
+        return fixJSON(result)
 
     # THIS IS THE ENDPOINT THAT IS ACCESSED FROM THE CLIENT
     @cross_origin()
     @token_required
     @marshal_with(prediction_response)
-    def put(self):
+    def put(current_user, self):
         # Predicts on an already binarized image
         args = prediction_post_args.parse_args()
 
@@ -292,38 +293,54 @@ class Prediction(Resource):
             date = datetime.today()
 
         result = {}
+        result["_doctorID"] = current_user['_id']
         result["patientCode"] = args["patientCode"]
         result["date"] = date
         result["points"] = args["points"]
-
+        
         insertResult = db.rocf.insert_one(result)
         result["_id"] = str(insertResult.inserted_id)
 
-        job = q.enqueue(ROCFevaluate, args, insertResult)
+        job = q.enqueue(ROCFevaluate, args, insertResult.inserted_id, current_user['_id'])
 
         return result
 class ROCFEvaluation(Resource): 
     @token_required
-    def get(self, id):
+    def get(current_user, self, id):
         #use 1 for accending, -1 for decending
-        result = db.rocf.find_one({'_id': ObjectId(id)})
-        return fixJSON(result), 200
+        result = db.rocf.find_one(
+            {
+                '_id': ObjectId(id),
+                '_doctorID': ObjectId(current_user['_id'])
+            }
+        )
+        if result:
+            return fixJSON(result), 200
+        else:
+            return {'error': 'ROCF not found'},404
 
 class ROCFEvaluationsList(Resource): 
     @token_required
-    def get(self):
+    def get(current_user, self):
         #use 1 for accending, -1 for decending
-        result = list(db.rocf.find().sort('date', -1).limit(20))
+        result = list(db.rocf.find(
+            {
+                '_doctorID': ObjectId(current_user['_id']) 
+            }
+        ).sort('date', -1))
         return fixJSON(result), 200
 
 
 class ROCFRevisions(Resource): 
     # @marshal_with(revision_response)
     @token_required
-    def post(self):
+    def post(current_user, self):
         args = revision_post_args.parse_args()
         evaluationId = args['_rocfEvaluationId']
-        queryInitialEvaluation = db.rocf.find_one({'_id': ObjectId(evaluationId)})
+        queryInitialEvaluation = db.rocf.find_one({
+            '_id': ObjectId(evaluationId),
+            '_doctorID': ObjectId(current_user['_id'])
+        })
         result = {}
         if queryInitialEvaluation: 
             result["_rocfEvaluationId"] = ObjectId(evaluationId)
@@ -339,14 +356,18 @@ class ROCFRevisions(Resource):
                     }
                 }
             )
-        
-        return fixJSON(result), 200
+            return fixJSON(result), 200
+        else: 
+            return {'error': 'ROCF not found'}, 404
 
 class ROCFFiles(Resource): 
     @token_required
-    def get(self, docID, version, filename):
-        doctorFolderPath = os.path.join(app.config['UPLOAD_PATH'], docID, version)
-        return send_from_directory(doctorFolderPath, filename)
+    def get(current_user, self, docID, version, filename):
+        if str(current_user['_id']) == docID:
+            doctorFolderPath = os.path.join(app.config['UPLOAD_PATH'], docID, version)
+            return send_from_directory(doctorFolderPath, filename)
+        else:
+            return {'error': 'You must be logged in to access this information'}, 401
     
     # @token_required
     # def post(self):
@@ -430,7 +451,7 @@ class Login(Resource):
 
 
 
-def ROCFevaluate(args, DBobject):
+def ROCFevaluate(args, rocfID, docID):
     original = homography.convertImageB64ToMatrix(args['imageb64'])
 
     date = args["date"]
@@ -445,7 +466,7 @@ def ROCFevaluate(args, DBobject):
         img = thresholding.preprocessingPhoto(original, args["points"], gamma=args["gamma"], constant= args["adaptiveThresholdC"], blockSize= args["adaptiveThresholdBS"])
     
     # HARDCODED DOCTOR ID UNTIL LOGIN
-    savedFileName = files.saveROCFImages(original, img, app.config['UPLOAD_PATH'], "xxxxxx3", args["patientCode"], date)
+    savedFileName = files.saveROCFImages(original, img, app.config['UPLOAD_PATH'], str(docID), args["patientCode"], date)
 
     # PREDICTION
     predictionComplexScores = predict_complex_scores.predictComplexScores(img, args['points'])
@@ -454,7 +475,7 @@ def ROCFevaluate(args, DBobject):
     scores = utils.generateScoresFromPrediction(predictionTotalScores)
 
     insertResult = db.rocf.update_one(
-        filter = { '_id': DBobject.inserted_id },
+        filter = { '_id': rocfID },
         update = { '$set': {
             'imageName': savedFileName,
             'scores': fixJSON(scores),

@@ -28,8 +28,8 @@ def getBackground(external, img, show=False, morph=False, ret_hier=False, intern
         # plt.show()
     background_t = cv2.bitwise_or(not_background_t,background_t)
 
-    if threshold > 246:
-        background_t = np.ones(interval, dtype=np.uint8) * 255
+    # if threshold > 246:
+    #     background_t = np.ones(interval, dtype=np.uint8) * 255
     background = np.ones_like(img) * 255
     background[min(points[:,1]):max(points[:,1]), min(points[:,0]):max(points[:,0])] = background_t
     if morph:
