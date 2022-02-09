@@ -4,7 +4,7 @@ def getLabelTextFromNumber(labelNumber):
   if labelNumber == 0:
     return 'normal'
   elif labelNumber == 1:
-    return 'MCI'
+    return 'mci'
   else:
     return 'dementia'
 
@@ -44,6 +44,7 @@ def predictDiagnosis(scores):
   return {
     'labelNumber': int(predictionDiagnosis),
     'labelText': getLabelTextFromNumber(predictionDiagnosis),
-    'probabilities': list(predictionProbabilities)
+    'probabilities': list(predictionProbabilities),
+    'doctorOverridden': False,
   }
 
