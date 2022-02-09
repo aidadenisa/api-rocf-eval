@@ -21,6 +21,16 @@ template_dic={
     6:'best_model_triplet_cross_vert_transfer.hdf5'
 } 
 
+def loadModels(template_dic):
+    models = []
+    for temp in template_dic:
+        m = getKerasModel(template_dic[temp])
+        models.append(m)
+
+    return models
+
+# models = loadModels(template_dic)
+
 class Visualization():
     def __init__(self, name, image, points, templates, shape, writer):
         self.img = image
@@ -33,6 +43,7 @@ class Visualization():
         self.scores=[]
         self.distances=[]
         self.rects=[]
+        self.embeddings=[]
         self.writer = writer
  
     def run(self):
@@ -44,15 +55,17 @@ class Visualization():
             template = self.templates[i]
             template =  np.repeat(template[..., np.newaxis], 3, -1)
             self.model = getKerasModel(template_dic[i])
+            # self.model = models[i]
 
             #plot_model(self.model, show_shapes=True)
-            max_val, distance, rect = self.grids[i].visualize(self.img, self.model, self.input_shape, template, i, self.name)
+            max_val, distance, rect, embedding = self.grids[i].visualize(self.img, self.model, self.input_shape, template, i, self.name)
             self.scores.append(max_val)
             self.distances.append(distance)
             self.rects.append(rect)
+            self.embeddings.append(embedding)
             T.clear_session()
             del self.model          
         
-        result = {'names':self.name, 'scores': self.scores, 'distances':self.distances, 'rect': self.rects}
-        self.writer.writerow(result)
+        result = {'names':self.name, 'scores': self.scores, 'distances':self.distances, 'rect': self.rects, 'embeddings': self.embeddings}
+
         return result

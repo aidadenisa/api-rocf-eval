@@ -64,12 +64,12 @@ class Pattern10:
       rail_bbox = self.predictionComplexScores['rect'][1]
       external = [(rail_bbox[0], rail_bbox[1]), (rail_bbox[0]+rail_bbox[2], rail_bbox[1]), (rail_bbox[0]+rail_bbox[2], rail_bbox[1]+rail_bbox[3]), (rail_bbox[0], rail_bbox[1]+rail_bbox[3])]
       background_rail, _ = getBackground(external, self.img, False)
-      pixel_rail = np.sum(np.divide(background_rail, 255))
-      rail_prediction = self.model_diag.predict(self.scaler_diag.transform(np.array([pixel_rail]).reshape(-1,1)))
-      score_rail = self.s.transform(np.array(self.predictionComplexScores['scores'][1]).reshape(-1,1))   
-      rail_score = self.m.predict(score_rail)
+      pixel_value = np.sum(np.divide(background_rail, 255))
+      pixel_prediction = self.model_diag.predict(self.scaler_diag.transform(np.array([pixel_value]).reshape(-1,1)))
+      embeddings_scaled = self.s.transform(np.array([self.predictionComplexScores['embeddings'][1]])) 
+      embeddings_prediction = self.m.predict(embeddings_scaled)
       
-      if rail_score == 1:
+      if embeddings_prediction == 1:
         self.drawing = cv2.rectangle(self.drawing, (rail_bbox[0], rail_bbox[1]),
                                         (rail_bbox[0] + rail_bbox[2], rail_bbox[1] + rail_bbox[3]), (255, 0, 0), 2)
         bbox_fig = Polygon(external)
@@ -102,7 +102,7 @@ class Pattern10:
             label_rail = 2
       
       else:
-        if rail_prediction == 1:
+        if pixel_prediction == 1:
           self.drawing = cv2.rectangle(self.drawing, (rail_bbox[0], rail_bbox[1]), (rail_bbox[0]+rail_bbox[2], rail_bbox[1]+rail_bbox[3]), (0,0,255), 2)
           print('PATTERN10: disegno impreciso')
           label_rail = 1
@@ -117,9 +117,9 @@ class Pattern10:
       h = np.abs(coords[1] - coords[3])
       external = [(x, y), (x+w, y), (x+w, y+h), (x, y+h)]
       background_rail, _ = getBackground(external, self.img, False)
-      pixel_rail = np.sum(np.divide(background_rail, 255))
-      rail_prediction = self.model_diag.predict(self.scaler_diag.transform(np.array([pixel_rail]).reshape(-1,1)))
-      if rail_prediction == 1:
+      pixel_value = np.sum(np.divide(background_rail, 255))
+      pixel_prediction = self.model_diag.predict(self.scaler_diag.transform(np.array([pixel_value]).reshape(-1,1)))
+      if pixel_prediction == 1:
         label_rail = 1
       else:
         label_rail = 0

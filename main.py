@@ -501,6 +501,7 @@ env = os.environ.get('FLASK_ENV')
 if __name__ == '__main__':
     if env == 'development':
         # for production debug=False
+        # app.run(debug=False, threaded = False)
         app.run(debug=True)
     elif env == 'production':
         app.run()

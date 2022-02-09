@@ -37,6 +37,7 @@ class Grid():
     
     def visualize(self, image, model, input_shape, template, idx, name):               
         min_val = np.inf
+        min_embeddings = []
         save_min = False
 
         dataset_images = []
@@ -66,6 +67,7 @@ class Grid():
             distance = triplet_loss._pairwise_distances(np.array([result[i]]), squared=False).numpy()[0, 0]
             if distance < min_val:
                 min_val = distance
+                min_embeddings = result[i]
                 save_min = True
                 x, y = self.grid[i]
                 min_x = max(0, x)
@@ -108,6 +110,7 @@ class Grid():
             distance = triplet_loss._pairwise_distances(np.array([result[i]]), squared=False).numpy()[0, 0]
             if distance < min_val:
                 min_val = distance
+                min_embeddings = result[i]
                 # (x, y, w, h)
                 min_x2 = coords_actions[i][0]
                 min_y2 = coords_actions[i][1]
@@ -127,4 +130,4 @@ class Grid():
           print('done iteration {}'.format(iteraction))
         
         print('done template {}'.format(idx))    
-        return min_val, math.hypot(int(min_x2-min_w/2-(self.x-self.w/2)), int(min_y2-min_h/2-(self.y-self.h/2))), (min_x2, min_y2, min_w, min_h)
+        return min_val, math.hypot(int(min_x2-min_w/2-(self.x-self.w/2)), int(min_y2-min_h/2-(self.y-self.h/2))), (min_x2, min_y2, min_w, min_h), min_embeddings
