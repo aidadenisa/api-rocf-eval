@@ -188,7 +188,8 @@ class Pattern3:
 
       # TODO: VERIFY EXPLANATION AND REPLACEMENT -
       # score_rail = self.s.transform(np.array(self.predictionComplexScores['scores'][4]).reshape(-1,1))
-      embeddings_scaled = self.s.transform(np.array([self.predictionComplexScores['embeddings'][4]]))
+      embeddingsWithoutAnchor = self.predictionComplexScores['embeddings'][4][:1024]
+      embeddings_scaled = self.s.transform(np.array([embeddingsWithoutAnchor]))
       embeddings_prediction = self.m.predict(embeddings_scaled)
       p1 = None
       p2 = None         

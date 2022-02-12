@@ -66,7 +66,8 @@ class Pattern10:
       background_rail, _ = getBackground(external, self.img, False)
       pixel_value = np.sum(np.divide(background_rail, 255))
       pixel_prediction = self.model_diag.predict(self.scaler_diag.transform(np.array([pixel_value]).reshape(-1,1)))
-      embeddings_scaled = self.s.transform(np.array([self.predictionComplexScores['embeddings'][1]])) 
+      embeddingsWithoutAnchor = self.predictionComplexScores['embeddings'][1][:1024]
+      embeddings_scaled = self.s.transform(np.array([embeddingsWithoutAnchor])) 
       embeddings_prediction = self.m.predict(embeddings_scaled)
       
       if embeddings_prediction == 1:

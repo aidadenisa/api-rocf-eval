@@ -71,9 +71,9 @@ prediction_post_args.add_argument("adaptiveThresholdBS", type=int, help="Adaptiv
 revision_post_args = reqparse.RequestParser()
 revision_post_args.add_argument("_rocfEvaluationId", type=str, help="Evaluation code is missing", required=True)
 revision_post_args.add_argument("revisedScores", type=list, location="json", help="Revised scores are missing", required=True)
-revision_post_args.add_argument("revisedDiagnosis", type=dict, location="json", help="Revised scores are missing", required=True)
+revision_post_args.add_argument("revisedDiagnosis", type=dict, location="json", help="Revised diagnosis is missing", required=True)
 revision_post_args.add_argument("scores", type=list, location="json", help="Updated scores are missing", required=True)
-revision_post_args.add_argument("diagnosis", type=dict, location="json", help="Updated scores are missing", required=True)
+revision_post_args.add_argument("diagnosis", type=dict, location="json", help="Updated diagnosis is missing", required=True)
 
 upload_rocf_post_args = reqparse.RequestParser()
 upload_rocf_post_args.add_argument("imageb64", type=str, help="Image is missing", required=True)

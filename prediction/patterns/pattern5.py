@@ -192,7 +192,8 @@ class Pattern5:
         background_rail, _ = getBackground(external, self.img, threshold=threshold)
         pixel_value = np.sum(np.divide(background_rail, 255))
         pixel_prediction = self.model_diag.predict(self.scaler_diag.transform(np.array([pixel_value]).reshape(-1, 1)))
-        embeddings_scaled = self.s.transform(np.array([self.predictionComplexScores['embeddings'][0]]))
+        embeddingsWithoutAnchor = self.predictionComplexScores['embeddings'][0][:1024]
+        embeddings_scaled = self.s.transform(np.array([embeddingsWithoutAnchor]))
         embeddings_prediction = self.m.predict(embeddings_scaled)        
         if embeddings_prediction == 1:
             self.drawing = cv2.rectangle(self.drawing, (rail_bbox[0], rail_bbox[1]), (rail_bbox[0] + rail_bbox[2], rail_bbox[1] + rail_bbox[3]), (255, 0, 0), 2)
