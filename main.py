@@ -227,11 +227,8 @@ class Preprocessing(Resource):
         # ADAPTIVE THRESHOLDING
         args = preprocessing_post_args.parse_args()
         img = homography.convertImageB64ToMatrix(args['imageb64'])
-        
-        img = cv2.bilateralFilter(img, 5, sigmaColor=8, sigmaSpace=8)
-        gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-        bw = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, args["blockSize"], args["constant"])
-        img = cv2.cvtColor(bw, cv2.COLOR_GRAY2RGB)
+
+        img = thresholding.preprocessingPhoto(img, args["points"], gamma=args["gamma"], constant= args["constant"], blockSize= args["blockSize"])
 
         imgb64 = homography.convertImageFromMatrixToB64(img)
         result = {}
