@@ -10,7 +10,7 @@ services:
       - REDIS_HOST=rocf-redis
       - REDIS_PORT=6379
     volumes:
-      - api-volume:/app/uploads
+      - ./uploads:/app/uploads
       - ./models:/app/models
     ports:
       - '5001:5000'
@@ -20,11 +20,11 @@ services:
     environment:
       - MONGO_URI=mongodb://rocfadmin:$MONGO_PASS@rocf-mongo:27017/rocf-db
     volumes:
-      - api-volume:/app/uploads
+      - ./uploads:/app/uploads
       - ./models:/app/models
-volumes:
-  api-volume:
-    driver: local
+# volumes:
+#   api-volume:
+#     driver: local
 
 networks:
   default:
