@@ -427,7 +427,7 @@ class Login(Resource):
         if user is None:
             return {'error': 'The email or password is wrong'}, 401
 
-        if bcrypt.checkpw(args['password'].encode('utf-8'), user['hash']):
+        if bcrypt.checkpw(args['password'].encode('utf-8'), user['hash'].encode('utf-8')):
             
             # return jwt
             token = jwt.encode({
