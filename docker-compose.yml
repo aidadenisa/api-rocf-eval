@@ -1,0 +1,32 @@
+version: '1'
+services:
+  rocfapi:
+    image: 'rocf-api:1.5'
+    environment:
+      - MONGO_URI=mongodb://rocfadmin:$MONGO_PASS@rocf-mongo:27017/rocf-db
+      - SECRET_KEY=$SECRET_KEY
+      - FLASK_APP=/app/main.py
+      - FLASK_ENV=development
+      - REDIS_HOST=rocf-redis
+      - REDIS_PORT=6379
+    volumes:
+      - ./uploads:/app/uploads
+      - ./models:/app/models
+    ports:
+      - '5001:5000'
+  worker:
+    image: 'rocf-api:1.5'
+    command: rq worker --url redis://rocf-redis:6379
+    environment:
+      - MONGO_URI=mongodb://rocfadmin:$MONGO_PASS@rocf-mongo:27017/rocf-db
+    volumes:
+      - ./uploads:/app/uploads
+      - ./models:/app/models
+# volumes:
+#   api-volume:
+#     driver: local
+
+networks:
+  default:
+    # Use a custom driver
+    name: rocf-network

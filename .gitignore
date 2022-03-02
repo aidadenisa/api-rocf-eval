@@ -10,3 +10,7 @@ uploads
 .env
 
 .DS_Store
+
+rocf-app.yaml
+
+polimi*
