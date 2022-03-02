@@ -12,4 +12,4 @@ MONGO_URI = os.environ.get('MONGO_URI')
 
 def initDB(app): 
   mongoClient = PyMongo(app, uri=MONGO_URI)
-  return mongoClient
+  return mongoClient.db

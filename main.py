@@ -12,8 +12,9 @@ from rq import Queue
 from datetime import datetime, timedelta
 
 #TODO: in production we need a pass
-r = redis.Redis()
-q = Queue(connection=r)
+
+r = redis.Redis(host=os.environ.get('REDIS_HOST'), port=os.environ.get('REDIS_PORT'))
+q = Queue(connection=r, default_timeout=400)
 
 from flask import Flask, request, send_from_directory, jsonify
 from flask_restful import Api, Resource, reqparse, abort, fields, marshal_with, inputs
@@ -31,8 +32,7 @@ api = Api(app)
 CORS(app)
 
 #DB
-mongoClient = database.initDB(app)
-db = mongoClient.db
+db = database.initDB(app)
 
 app.config['CORS_HEADERS'] = 'Content-Type'
 app.config['UPLOAD_EXTENSIONS'] = ['.jpg']
@@ -503,9 +503,9 @@ if __name__ == '__main__':
     if env == 'development':
         # for production debug=False
         # app.run(debug=False, threaded = False)
-        app.run(debug=True)
+        app.run(debug=True, host='0.0.0.0') 
     elif env == 'production':
-        app.run()
+        app.run(host='0.0.0.0')
 
 # print ("DOWNLOADING FILES")
 # model_storage.downloadModels()

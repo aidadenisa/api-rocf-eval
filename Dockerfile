@@ -1,5 +1,10 @@
+# This configuration file is used to create the Docker image of the application.
+
 # start by pulling the python image
 FROM python:3.7-slim-buster
+
+RUN apt-get update
+RUN apt-get install ffmpeg libsm6 libxext6 gcc g++ -y
 
 # copy the requirements file into the image
 COPY ./requirements.txt /app/requirements.txt
@@ -19,4 +24,6 @@ COPY . /app
 # configure the container to run in an executed manner
 # ENTRYPOINT [ "flask", "run" ]
 
-CMD ["flask", "run" ]
+EXPOSE 5000
+
+CMD ["flask", "run", "-h", "0.0.0.0" ]
