@@ -93,7 +93,7 @@ def get_pixel_sum(background, external, pad_new, internal):
   #   plt.imshow(background_new, cmap='gray')
   #   plt.show()
   # return the sum of pixels
-  return np.sum(np.divide(background_new, 255))
+  return np.sum(background_new)
 
 # Hough Line Transform - Probabilistically detect the presence of a line
 def best_line(background, drawing=None, oriz=True):
@@ -297,9 +297,13 @@ class Pattern2:
           # then offer the full score
           label_rect = 3
         else:
-          print('PATTERN2: the lines are not precise')
-          # else, the line is not precise, so give 1 
-          label_rect = 1
+          bigDistances = np.array([l1[1].intersects(l2[0]),l2[1].intersects(l3[1]),l4[1].intersects(l3[0]), l4[0].intersects(l1[0])]) > 35
+          if len(bigDistances[bigDistances == True]) == 0 :
+            label_rect = 3
+          else: 
+            print('PATTERN2: the lines are not precise')
+            # else, the line is not precise, so give 1 
+            label_rect = 1
         return self.drawing, label_rect, (ret, ret_vertices)       
     # else, if we were not able to extract a polygon, 
     else:
