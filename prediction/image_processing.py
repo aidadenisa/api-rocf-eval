@@ -9,7 +9,7 @@ def getBackground(external, img, morph=True, ret_hier=False, internal=None):
     background = np.zeros_like(img)
 
     #get the points of the external ROI and reshape them for the fillConvexPoly function
-    points = np.array([external]).reshape((4, 1, 2))
+    points = (np.array([external]).astype(int)).reshape((4, 1, 2))
     #create a fill for the shape that is determined by the points, and fill it with the color white
     background = cv2.fillConvexPoly(background, points, (255, 255, 255))
     # create a mask with true outside the ROI (opposite of current bg)
@@ -19,7 +19,7 @@ def getBackground(external, img, morph=True, ret_hier=False, internal=None):
     #create an image that is white on the mask outside the ROI
     if internal is not None:
       #get the points representing the internal ROI and reshape them for the fillConvexPoly function
-      int_points = np.array([internal]).reshape((4, 1, 2))
+      int_points = (np.array([internal]).astype(int)).reshape((4, 1, 2))
       #fill in the shape created by the interior points with white color
       background = cv2.fillConvexPoly(background, int_points, (255, 255, 255))
     '''overlap = cv2.polylines(cv2.cvtColor(img.copy(), cv2.COLOR_GRAY2RGB), [points], True, (255, 0, 0), 1)    
