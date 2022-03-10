@@ -9,12 +9,10 @@ def getLabelTextFromNumber(labelNumber):
     return 'dementia'
 
 def predictDiagnosis(scores):
-  classifierNormalPathology = retrieveModel('svm_model_normal_to_pathology.joblib')
-  scalerNormalPathology = retrieveModel('svm_scaler_normal_to_pathology.joblib')
-  # classifierMCIDementia = retrieveModel('svm_model_MCI_to_dementia.joblib')
-  # scalerMCIDementia = retrieveModel('svm_scaler_MCI_to_dementia.joblib')
-  classifierMCIDementia = retrieveModel('svm_model_unbalanced_MCI_to_dementia.joblib')
-  scalerMCIDementia = retrieveModel('svm_scaler_unbalanced_MCI_to_dementia.joblib')
+  classifierNormalPathology = retrieveModel('smv_diagnosis_normal_pathological_model.joblib')
+  scalerNormalPathology = retrieveModel('smv_diagnosis_normal_pathological_scaler.joblib')
+  classifierMCIDementia = retrieveModel('smv_diagnosis_mci_dementia_model.joblib')
+  scalerMCIDementia = retrieveModel('smv_diagnosis_mci_dementia_scaler.joblib')
 
   scoresLabels = [pattern['label'] for pattern in scores]
 
@@ -25,7 +23,6 @@ def predictDiagnosis(scores):
   scoresScaledMCIDementia = scalerMCIDementia.transform([scoresLabels])
   predictionDiagnosisMCIDementia = classifierMCIDementia.predict(scoresScaledMCIDementia)[0]
   predictionProbabilitiesMCIDementia = classifierMCIDementia.predict_proba(scoresScaledMCIDementia)[0]
-  # predictionProbabilitiesMCIDementia = classifierMCIDementia.predict_proba(scoresScaledMCIDementia)[0]
 
   # if the predicted diagnosis is Normal 
   if predictionDiagnosisNormalPathology == 0 :
