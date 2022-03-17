@@ -6,6 +6,7 @@ from skimage.morphology import skeletonize
 from shapely.geometry import Polygon
 
 from preprocessing.homography import sharpenDrawing
+from preprocessing.thresholding import getSplitsFromROI
 
 #TODO: TRY TO EXTRACT IT, IT HAS A DIFFERENT SKELETONIZE
 def getBackground(external, img, morph=True, ret_hier=False, internal=None):
@@ -62,9 +63,7 @@ class Pattern15:
     if self.predictionComplexScores:
       rail_bbox = self.predictionComplexScores['rect'][5]
       external = [(rail_bbox[0], rail_bbox[1]), (rail_bbox[0]+rail_bbox[2], rail_bbox[1]), (rail_bbox[0]+rail_bbox[2], rail_bbox[1]+rail_bbox[3]), (rail_bbox[0], rail_bbox[1]+rail_bbox[3])]
-      background_rail, _ = getBackground(external, self.img, False)
-      pixel_value = np.sum(np.divide(background_rail, 255))
-      pixel_prediction = self.model_diag.predict(self.scaler_diag.transform(np.array([pixel_value]).reshape(-1,1)))
+      
       embeddingsWithoutAnchor = self.predictionComplexScores['embeddings'][5][:1024]
       embeddings_scaled = self.s.transform(np.array([embeddingsWithoutAnchor]))
       embeddings_prediction = self.m.predict(embeddings_scaled)
@@ -80,6 +79,15 @@ class Pattern15:
               print('PATTERN15: mal posizionato')
               label_rail = 2        
       else:
+        roiSplit = getSplitsFromROI(external)
+        roiPixels = []
+        for roi in range(len(roiSplit)):
+            background, _ = getBackground(roiSplit[roi], self.img)
+            pixel_value= np.sum(np.divide(background, 255))
+            roiPixels.append(pixel_value)
+
+        pixel_prediction = self.model_diag.predict(self.scaler_diag.transform(np.array(roiPixels).reshape(1, -1)))
+
         if pixel_prediction == 1:
           self.drawing = cv2.rectangle(self.drawing, (rail_bbox[0], rail_bbox[1]), (rail_bbox[0]+rail_bbox[2], rail_bbox[1]+rail_bbox[3]), (0,0,255), 2)
           print('PATTERN15: disegno impreciso')
@@ -94,9 +102,15 @@ class Pattern15:
       w = np.abs(coords[0] - coords[2])
       h = np.abs(coords[1] - coords[3])
       external = [(x, y), (x+w, y), (x+w, y+h), (x, y+h)]
-      background_rail, _ = getBackground(external, self.img, False)
-      pixel_value = np.sum(np.divide(background_rail, 255))
-      pixel_prediction = self.model_diag.predict(self.scaler_diag.transform(np.array([pixel_value]).reshape(-1,1)))
+      roiSplit = getSplitsFromROI(external)
+      roiPixels = []
+      for roi in range(len(roiSplit)):
+          background, _ = getBackground(roiSplit[roi], self.img)
+          pixel_value= np.sum(np.divide(background, 255))
+          roiPixels.append(pixel_value)
+
+      pixel_prediction = self.model_diag.predict(self.scaler_diag.transform(np.array(roiPixels).reshape(1, -1)))
+      
       if pixel_prediction == 1:
         label_rail = 1
       else:

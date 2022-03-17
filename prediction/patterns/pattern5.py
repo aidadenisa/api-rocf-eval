@@ -6,6 +6,7 @@ from skimage.morphology import skeletonize
 
 
 from preprocessing.homography import maxDeviationThresh
+from preprocessing.thresholding import getSplitsFromROI
 
 def best_line(backgrounds, idx, only_length, external, draw=False):
     background = backgrounds[idx]
@@ -189,9 +190,7 @@ class Pattern5:
         rail_bbox = self.predictionComplexScores['rect'][0]
         external = [(rail_bbox[0], rail_bbox[1]), (rail_bbox[0] + rail_bbox[2], rail_bbox[1]),(rail_bbox[0] + rail_bbox[2], rail_bbox[1] + rail_bbox[3]),
                     (rail_bbox[0], rail_bbox[1] + rail_bbox[3])]
-        background_rail, _ = getBackground(external, self.img, threshold=threshold)
-        pixel_value = np.sum(np.divide(background_rail, 255))
-        pixel_prediction = self.model_diag.predict(self.scaler_diag.transform(np.array([pixel_value]).reshape(-1, 1)))
+
         embeddingsWithoutAnchor = self.predictionComplexScores['embeddings'][0][:1024]
         embeddings_scaled = self.s.transform(np.array([embeddingsWithoutAnchor]))
         embeddings_prediction = self.m.predict(embeddings_scaled)        
@@ -207,6 +206,15 @@ class Pattern5:
                 label_rail = 1
                 print('PATTERN5: linea attacco rettangolo mancante')
         else:
+            roiSplit = getSplitsFromROI(external)
+            roiPixels = []
+            for roi in range(len(roiSplit)):
+                background, _ = getBackground(roiSplit[roi], self.img)
+                pixel_value= np.sum(np.divide(background, 255))
+                roiPixels.append(pixel_value)
+
+            pixel_prediction = self.model_diag.predict(self.scaler_diag.transform(np.array(roiPixels).reshape(1, -1)))
+    
             if pixel_prediction == 1:
                 self.drawing = cv2.rectangle(self.drawing, (rail_bbox[0], rail_bbox[1]),(rail_bbox[0] + rail_bbox[2], rail_bbox[1] + rail_bbox[3]),
                                               (0, 0, 255), 2)
@@ -223,9 +231,15 @@ class Pattern5:
         w = np.abs(coords[0] - coords[2])
         h = np.abs(coords[1] - coords[3])
         external = [(x, y), (x + w, y), (x + w, y + h), (x, y + h)]
-        background_rail, _ = getBackground(external, self.img, False)
-        pixel_value = np.sum(np.divide(background_rail, 255))
-        pixel_prediction = self.model_diag.predict(self.scaler_diag.transform(np.array([pixel_value]).reshape(-1, 1)))
+        roiSplit = getSplitsFromROI(external)
+        roiPixels = []
+        for roi in range(len(roiSplit)):
+            background, _ = getBackground(roiSplit[roi], self.img)
+            pixel_value= np.sum(np.divide(background, 255))
+            roiPixels.append(pixel_value)
+
+        pixel_prediction = self.model_diag.predict(self.scaler_diag.transform(np.array(roiPixels).reshape(1, -1)))
+    
         if pixel_prediction == 1:
             label_rail = 1
         else:

@@ -186,7 +186,7 @@ def find_line(image, points, predictionComplexScores, threshold):
     return results
 
 
-def predictScores(image, points, predictionComplexScores, threshold):
+def predictScores(image, points, predictionComplexScores, threshold=255):
 
     name = "newImage"
 

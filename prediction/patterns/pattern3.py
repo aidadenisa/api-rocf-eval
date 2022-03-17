@@ -8,7 +8,7 @@ from shapely.ops import unary_union
 
 from prediction.image_processing import thick_rect
 from prediction.utils import to_tuple, to_float
-from preprocessing import homography
+from preprocessing import homography, thresholding
 
 def get_external(line):
   thick = 20
@@ -147,8 +147,8 @@ def getBackground(external, img, morph=True, ret_hier=False, threshold=None):
     not_background = cv2.bitwise_not(background)
     background = cv2.bitwise_and(img, background)  
     background = cv2.bitwise_or(not_background,background)
-    if threshold > 245:
-        background = np.ones_like(img) * 255   
+    # if threshold > 245:
+    #     background = np.ones_like(img) * 255   
     background = cv2.bitwise_not(background)
     background = skeletonize(background / 255, method='lee').astype(np.uint8)
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
@@ -181,11 +181,7 @@ class Pattern3:
     # if self.img_path[:-4] in df_rail.index:
     if self.predictionComplexScores: 
       external = [(rail_bbox[0], rail_bbox[1]), (rail_bbox[0]+rail_bbox[2], rail_bbox[1]), (rail_bbox[0]+rail_bbox[2], rail_bbox[1]+rail_bbox[3]), (rail_bbox[0], rail_bbox[1]+rail_bbox[3])]
-      background_rail, _ = getBackground(external, self.img, threshold=threshold)
-      pixel_value= np.sum(np.divide(background_rail, 255))
-      #rail_prediction, diags = get_diag(external, self.img)
-      pixel_prediction = self.model_diag.predict(self.scaler_diag.transform(np.array([pixel_value]).reshape(-1, 1)))
-
+      
       # TODO: VERIFY EXPLANATION AND REPLACEMENT -
       # score_rail = self.s.transform(np.array(self.predictionComplexScores['scores'][4]).reshape(-1,1))
       embeddingsWithoutAnchor = self.predictionComplexScores['embeddings'][4][:1024]
@@ -222,7 +218,16 @@ class Pattern3:
               label_rail = 3
           else:
               label_rail = 2
-      else:    
+      else:  
+          roiSplit = thresholding.getSplitsFromROI(external)
+          roiPixels = []
+          for roi in range(len(roiSplit)):
+            background, _ = getBackground(roiSplit[roi], self.img)
+            pixel_value= np.sum(np.divide(background, 255))
+            roiPixels.append(pixel_value)
+
+          pixel_prediction = self.model_diag.predict(self.scaler_diag.transform(np.array(roiPixels).reshape(1, -1)))
+    
           if pixel_prediction == 1:
             #self.drawing = cv2.rectangle(self.drawing, (rail_bbox[0], rail_bbox[1]), (rail_bbox[0]+rail_bbox[2], rail_bbox[1]+rail_bbox[3]), (255,0,0), 2)
             print('PATTERN3: disegno impreciso')
@@ -238,9 +243,14 @@ class Pattern3:
       w = np.abs(coords[0] - coords[2])
       h = np.abs(coords[1] - coords[3])
       external = [(x, y), (x+w, y), (x+w, y+h), (x, y+h)]
-      background_rail, _ = getBackground(external, self.img, threshold=threshold)
-      pixel_value = np.sum(np.divide(background_rail, 255))
-      pixel_prediction = self.model_diag.predict(self.scaler_diag.transform(np.array([pixel_value]).reshape(-1,1)))
+      roiSplit = thresholding.getSplitsFromROI(external)
+      roiPixels = []
+      for roi in range(len(roiSplit)):
+        background, _ = getBackground(roiSplit[roi], self.img)
+        pixel_value= np.sum(np.divide(background, 255))
+        roiPixels.append(pixel_value)
+
+      pixel_prediction = self.model_diag.predict(self.scaler_diag.transform(np.array(roiPixels).reshape(1, -1)))
       if pixel_prediction == 1:
         label_rail = 1
       else:

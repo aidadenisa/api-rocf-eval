@@ -7,6 +7,8 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 
+from prediction import predict_complex_scores, predict_simple_scores, predict_classification, utils
+
 def saveROCFImages(original, threshed, uploadPath, doctorID, patientCode, date):
     if date is None:
         date = datetime.today()
@@ -75,7 +77,29 @@ def generateThresholdedHomographies(sourceFolderURL, destinationFolderURL, type=
                 
                 cv2.imwrite(location, img)
 
-    
+def predictOnDataset(sourceFolderURL, destinationFolderURL, filename, points, pattern_list):
+
+    patientCode = filename[:-4]
+
+    img = cv2.imread(os.path.join(sourceFolderURL,filename), cv2.IMREAD_GRAYSCALE)
+    imagePoints = points.loc[patientCode][0]
+    imagePoints = [tuple(x) for x in imagePoints]
+
+    predictionComplexScores = predict_complex_scores.predictComplexScores(img, imagePoints)
+    predictionTotalScores = predict_simple_scores.predictScores(img, imagePoints, predictionComplexScores)
+    predictionDiagnosis = predict_classification.predictDiagnosis(predictionTotalScores)
+    scores = utils.generateScoresFromPrediction(predictionTotalScores)
+
+    df = pd.DataFrame([[x['label'] for x in predictionTotalScores]], columns=pattern_list)
+    df["name"] = patientCode
+
+    # if is_header: 
+    #     df.to_csv(os.path.join(destinationFolderURL,'total_scores.csv'), header = True, index=False)
+    #     is_header = False
+    # else:
+    df.to_csv(os.path.join(destinationFolderURL,'total_scores.csv'), mode = 'a', header = False, index=False)
+
+
 
 
 

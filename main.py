@@ -6,6 +6,7 @@ from bson import ObjectId
 import bcrypt
 import jwt
 from functools import wraps
+import pandas as pd
 
 import redis
 from rq import Queue
@@ -235,6 +236,23 @@ class Preprocessing(Resource):
         result["image"] = imgb64
         return result
 class Prediction(Resource):
+    def get(self):
+        args = thresholded_homographies_post_args.parse_args()
+        
+        if not os.path.isdir(args['sourceFolderURL']):
+            print("error: source url is not a folder")
+            return
+
+        q.empty()
+        
+        for filename in os.listdir(args['sourceFolderURL']):
+            if filename.endswith(tuple([".png", ".jpg", ".PNG", ".JPG"])):
+                # ROCFPredictOnFolder(args, filename)
+                
+                job = q.enqueue(ROCFPredictOnFolder, args, filename)
+
+        return 'prediction started on all thresholded images', 200
+
     @cross_origin()
     @token_required
     # @marshal_with(prediction_response)
@@ -370,12 +388,16 @@ class ROCFFiles(Resource):
         else:
             return {'error': 'You must be logged in to access this information'}, 401
     
-    # @token_required
-    # def post(self):
-    #     args = upload_rocf_post_args.parse_args()
-    #     files.saveROCFImage(args["imageb64"], app.config['UPLOAD_PATH'], args["doctorID"],
-    #         args["patientCode"], args["date"])
-    #     return 200
+    @token_required
+    def post(current_user, self):
+        args = upload_rocf_post_args.parse_args()
+        if str(current_user['_id']) == str(args['docID']) :
+            original = homography.convertImageB64ToMatrix(args['imageb64'])
+            img = thresholding.preprocessingPhoto(original, args["points"], gamma=args["gamma"], constant= args["adaptiveThresholdC"], blockSize= args["adaptiveThresholdBS"])
+            savedFileName = files.saveROCFImages(original, img, app.config['UPLOAD_PATH'], str(args['docID']), args["patientCode"])   
+            return savedFileName, 200
+        else:
+            return {'error': 'You must be logged in to access this information'}, 401
 
 class ThresholdedHomographies(Resource): 
     @token_required
@@ -484,6 +506,13 @@ def ROCFevaluate(args, rocfID, docID):
             }
         }
     )
+
+def ROCFPredictOnFolder(args, filename):
+    pattern_list = ['PATTERN1','PATTERN2','PATTERN3','PATTERN4','PATTERN5','PATTERN6','PATTERN7','PATTERN8','PATTERN9','PATTERN10','PATTERN11','PATTERN12','PATTERN13','PATTERN14','PATTERN15','PATTERN16','PATTERN17','PATTERN18']
+
+    is_header = True
+    points = pd.read_json(os.path.join(args['sourceFolderURL'], 'points.txt'), lines=True).set_index('name')
+    files.predictOnDataset(args["sourceFolderURL"], args["destinationFolderURL"], filename, points, pattern_list)
 
 # good
 api.add_resource(Preprocessing, "/preprocessing")
