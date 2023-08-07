@@ -236,6 +236,7 @@ class Preprocessing(Resource):
         result["image"] = imgb64
         return result
 class Prediction(Resource):
+    @token_required
     def get(self):
         args = thresholded_homographies_post_args.parse_args()
         
